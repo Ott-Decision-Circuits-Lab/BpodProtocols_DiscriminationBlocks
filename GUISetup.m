@@ -288,13 +288,18 @@ if isempty(fieldnames(TaskParameters))
     %%
     TaskParameters.GUI = orderfields(TaskParameters.GUI);
     %% Tabs
-    TaskParameters.GUITabs.General = {'General','StimDelay','BiasControl','FeedbackDelay','BlockStructure'};
+    TaskParameters.GUITabs.General = {'General','StimDelay','BiasControl','FeedbackDelay'};
+    TaskParameters.GUITabs.Block = {'BlockStructure'};
     TaskParameters.GUITabs.Odor = {'Olfactometer','OlfStimuli'};
     TaskParameters.GUITabs.Auditory = {'AudGeneral','AudMinSample','AudClicks','AudFreq','AudFreqLevels'};
     TaskParameters.GUITabs.Plots = {'ShowPlots','Vevaiometric'};
     TaskParameters.GUITabs.Laser = {'LaserGeneral','LaserTrain','LaserTaskEpochs'};
     TaskParameters.GUITabs.Video = {'VideoGeneral'};
     TaskParameters.GUITabs.Photometry = {'PhotometryRecording','PhotometryNidaq','PhotometryPlot','PhotometryRig'};
+    
+    % Reorder tabs for clarity
+    TaskParameters.GUITabs = orderfields(TaskParameters.GUITabs, ...
+        {'General', 'Block', 'Odor', 'Auditory', 'Plots', 'Laser', 'Video', 'Photometry'});
     
     %%Non-GUI Parameters (but saved)
     % Setting TaskParameters.Figures.ParameterGUI.Position causes GUI

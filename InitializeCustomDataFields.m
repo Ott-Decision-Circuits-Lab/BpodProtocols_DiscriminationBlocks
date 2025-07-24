@@ -11,6 +11,21 @@ if iTrial == 1
 end
 
 TDTemp = BpodSystem.Data.Custom.TrialData; % temporary container
+
+% Ensure BlockNumber and BlockTrial exist for this trial before use
+if ~isfield(TDTemp, 'BlockNumber')
+    TDTemp.BlockNumber = NaN(iTrial,1);  % Pre-allocate if field missing
+end
+if ~isfield(TDTemp, 'BlockTrial')
+    TDTemp.BlockTrial = NaN(iTrial,1);    % Pre-allocate if field missing
+end
+
+% Resize arrays to fit current trial index
+if length(TDTemp.BlockNumber) < iTrial
+    TDTemp.BlockNumber(iTrial) = NaN;
+    TDTemp.BlockTrial(iTrial) = NaN;
+end
+
 TDTemp.TrialNumber(iTrial) = iTrial;
 
 
@@ -36,10 +51,16 @@ else
     TDTemp.CatchTrial(iTrial) = false;
 end
 
+% -----------------------Auditory Bias---------------------- %
+% Now that BlockNumber is known, define BlockTableMask
+BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
+
+% Get current block's auditory bias
+CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
+
+% Override for early trials (Block 1, AudLeftBias = 0.5)
 if iTrial <= TaskParameters.GUI.StartEasyTrials
-    CurrentAudBias = 0.5;  % First block's bias for early trials
-else
-    CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Dynamic bias after easy trials
+    CurrentAudBias = 0.5;
 end
 % ---------------------------------------------------------------------- %
 
@@ -53,7 +74,6 @@ TDTemp.Rewarded(iTrial) = false;
 
 % -----------------------Block-dependent variables---------------------- %
 % The block determines the signal priors
-% -----------------------Block-dependent variables---------------------- %
 if iTrial > 1
     if iTrial > TaskParameters.GUI.StartEasyTrials
         % Allow block transitions after easy trials
@@ -84,7 +104,12 @@ end
 
 % Get current block's auditory bias
 BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
-CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask); % Bias from block table
+% Override for early trials (Block 1, AudLeftBias = 0.5)
+if iTrial <= TaskParameters.GUI.StartEasyTrials
+    CurrentAudBias = 0.5;
+else
+    CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask); % Bias from block table
+end
 
 TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
 TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;

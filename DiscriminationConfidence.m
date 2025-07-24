@@ -46,7 +46,13 @@ while RunSession
     SoundLevel = 5;
     ClickLength = 2;
     if BpodSystem.EmulatorMode
-        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta');
+        % EMULATOR MODE: Generate click trains dynamically
+        % Fetch current block's auditory bias from TrialData
+        currentBlock = BpodSystem.Data.Custom.TrialData.BlockNumber(iTrial);  % Already set by InitializeCustomDataFields
+        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == currentBlock;
+        BlockBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Define BlockBias here
+        
+        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta', BlockBias);
     else
         LoadTrialDependentWaveform(Player, iTrial, SoundLevel, ClickLength); % Load white noise, stimuli trains, and error sound to wave player if not EmulatorMode
         InitiateOlfactometer(iTrial);
