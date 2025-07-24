@@ -1,10 +1,10 @@
-function [LeftClickTrain,RightClickTrain] = GetClickStimulus(iTrial, Duration, SamplingRate, ClickLength, SoundLevel, Mode)
+function [LeftClickTrain,RightClickTrain] = GetClickStimulus(iTrial, Duration, SamplingRate, ClickLength, SoundLevel, Mode, BlockBias)
 
 global TaskParameters
 global BpodSystem
 
-if nargin<6
-    Mode = 'uniform';
+if nargin < 6 || isempty(BlockBias)
+    BlockBias = TaskParameters.GUI.LeftBiasAud;  % Fallback for legacy code
 end
 if nargin<5
     SoundLevel = 0.8;
@@ -36,18 +36,18 @@ switch Mode
             AuditoryAlpha = TaskParameters.GUI.AuditoryAlpha/4;
         end
         
-        BetaRatio = (1 - min(0.9,max(0.1,TaskParameters.GUI.LeftBiasAud))) / min(0.9,max(0.1,TaskParameters.GUI.LeftBiasAud));
+        BetaRatio = (1 - min(0.9, max(0.1, BlockBias))) / min(0.9, max(0.1, BlockBias));
         %use a = ratio*b to yield E[X] = LeftBiasAud using Beta(a,b) pdf
         %cut off between 0.1-0.9 to prevent extreme values (only one side) and div by zero
         BetaA =  (2*AuditoryAlpha*BetaRatio) / (1+BetaRatio); %make a,b symmetric around AuditoryAlpha to make B symmetric
         BetaB = (AuditoryAlpha-BetaA) + AuditoryAlpha;
         
-        if rand(1,1) < TaskParameters.GUI.Percent50Fifty && iTrial > TaskParameters.GUI.StartEasyTrials
-            BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = 0.5;
+        if rand(1,1) < TaskParameters.GUI.Percent50Fifty && ~TDTemp.CatchTrial(iTrial)
+            BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = 0.5;  % 50/50 trials
         else
-            BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = betarnd(max(0,BetaA),max(0,BetaB),1,1); %prevent negative parameters
+            BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = betarnd(max(0,BetaA), max(0,BetaB),1,1);
         end
-        
+                
         LeftClickRate = round(BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial)*TaskParameters.GUI.SumRates);
         RightClickRate = TaskParameters.GUI.SumRates - LeftClickRate;
         

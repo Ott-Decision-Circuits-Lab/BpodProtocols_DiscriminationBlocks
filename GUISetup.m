@@ -150,11 +150,12 @@ if isempty(fieldnames(TaskParameters))
     %% Block structure
     TaskParameters.GUI.BlockTable.BlockNumber = [1, 2, 3, 4]';
     TaskParameters.GUI.BlockTable.BlockLen = ones(4,1)*5000;
-    TaskParameters.GUI.BlockTable.RewL = [1 randsample([1 .6],2) 1]';
-    TaskParameters.GUI.BlockTable.RewR = flipud(TaskParameters.GUI.BlockTable.RewL);
+    TaskParameters.GUI.BlockTable.AudLeftBias = [0.5, 0.7, 0.3, 0.5]';  % Left bias per block
+    %TaskParameters.GUI.BlockTable.RewL = [1 randsample([1 .6],2) 1]';
+    %TaskParameters.GUI.BlockTable.RewR = flipud(TaskParameters.GUI.BlockTable.RewL);
     TaskParameters.GUIMeta.BlockTable.Style = 'table';
     TaskParameters.GUIMeta.BlockTable.String = 'Block structure';
-    TaskParameters.GUIMeta.BlockTable.ColumnLabel = {'Block#','Block Length','Rew L', 'Rew R'};
+    TaskParameters.GUIMeta.BlockTable.ColumnLabel = {'Block#','Block Length','Aud Left Bias'};
     TaskParameters.GUIPanels.BlockStructure = {'BlockTable'};
     
     %% Plots

@@ -35,6 +35,12 @@ if iTrial > TaskParameters.GUI.StartEasyTrials
 else
     TDTemp.CatchTrial(iTrial) = false;
 end
+
+if iTrial <= TaskParameters.GUI.StartEasyTrials
+    CurrentAudBias = 0.5;  % First block's bias for early trials
+else
+    CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Dynamic bias after easy trials
+end
 % ---------------------------------------------------------------------- %
 
 
@@ -46,33 +52,43 @@ TDTemp.Rewarded(iTrial) = false;
 
 
 % -----------------------Block-dependent variables---------------------- %
-% The block determines the reward magnitude
+% The block determines the signal priors
+% -----------------------Block-dependent variables---------------------- %
 if iTrial > 1
-    FinalBlock = max(TaskParameters.GUI.BlockTable.BlockNumber);
-    if TDTemp.BlockNumber(iTrial-1) < FinalBlock
-        BlockNumberMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial-1);
-        CurrBlockLength = TaskParameters.GUI.BlockTable.BlockLen(BlockNumberMask);
-        if TDTemp.BlockTrial(iTrial-1) >= CurrBlockLength % Block transition
-            TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1) + 1;
-            TDTemp.BlockTrial(iTrial) = 1;
-        else  % continue in same block and increment block trial number
+    if iTrial > TaskParameters.GUI.StartEasyTrials
+        % Allow block transitions after easy trials
+        FinalBlock = max(TaskParameters.GUI.BlockTable.BlockNumber);
+        if TDTemp.BlockNumber(iTrial-1) < FinalBlock
+            BlockNumberMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial-1);
+            CurrBlockLength = TaskParameters.GUI.BlockTable.BlockLen(BlockNumberMask);
+            if TDTemp.BlockTrial(iTrial-1) >= CurrBlockLength  % Block transition
+                TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1) + 1;
+                TDTemp.BlockTrial(iTrial) = 1;
+            else  % Continue in same block
+                TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1);
+                TDTemp.BlockTrial(iTrial) = TDTemp.BlockTrial(iTrial-1) + 1;
+            end
+        else  % Final block
             TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1);
             TDTemp.BlockTrial(iTrial) = TDTemp.BlockTrial(iTrial-1) + 1;
         end
-    else % Final block
-        TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1);
-        TDTemp.BlockTrial(iTrial) = TDTemp.BlockTrial(iTrial-1) + 1;
+    else
+        % Early trials: lock to Block 1
+        TDTemp.BlockNumber(iTrial) = 1;
+        TDTemp.BlockTrial(iTrial) = iTrial;  % Increment trial count within Block 1
     end
-else  % First trial of first block
+else  % First trial
     TDTemp.BlockNumber(iTrial) = 1;
     TDTemp.BlockTrial(iTrial) = 1;
 end
 
-% TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount * TaskParameters.GUI.BlockTable.RewL(1);
-% TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount * TaskParameters.GUI.BlockTable.RewR(1);
+% Get current block's auditory bias
 BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
-TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount * TaskParameters.GUI.BlockTable.RewL(BlockTableMask);
-TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount * TaskParameters.GUI.BlockTable.RewR(BlockTableMask);
+CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask); % Bias from block table
+
+TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
+TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;
+
 % ---------------------------------------------------------------------- %
 
 

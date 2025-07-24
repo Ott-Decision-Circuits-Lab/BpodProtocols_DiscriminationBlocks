@@ -342,9 +342,16 @@ switch Action
                         end
                     else
                         lineColor = rgb2hsv([0.8314    0.5098    0.4157]);
-                        bias = tanh(.3 * [1 -1] * TDTemp.RewardMagnitude(:, find(BlockIdx,1)));
-                        lineColor(1) = 0.08+0.04*bias; lineColor(2) = .75; lineColor(3) = abs(bias); lineColor = hsv2rgb(lineColor);
-                        %                     lineColor = lineColor + [0 0.3843*(tanh(TDTemp.RewardMagnitude(find(BlockIdx,1),:) * [1 -1]')) 0]
+                        %bias = tanh(.3 * [1 -1] * TDTemp.RewardMagnitude(:, find(BlockIdx,1)));
+                        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == iBlock;
+                        currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Fetch block-specific bias
+                        bias = tanh(0.3 * (currentAudBias - 0.5) * 2);  % Scale to [-1,1]
+                        % Set line color using auditory bias
+                        lineColor = rgb2hsv([0.8314    0.5098    0.4157]);  % Original color base
+                        lineColor(1) = 0.08 + 0.04 * bias;  % Hue shift based on auditory bias
+                        lineColor(2) = 0.75;                 % Saturation
+                        lineColor(3) = abs(bias);             % Value
+                        lineColor = hsv2rgb(lineColor);
                         BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock) = line(AxesHandles.HandlePsycAud,PsycX,PsycY, 'LineStyle','none','Marker','o',...
                             'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',6);
                         BpodSystem.GUIHandles.OutcomePlot.PsycOlfAud(iBlock) = line(AxesHandles.HandlePsycAud,[0 100],[.5 .5],'color',lineColor);

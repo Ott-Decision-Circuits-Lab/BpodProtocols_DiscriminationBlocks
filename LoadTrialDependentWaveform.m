@@ -15,14 +15,25 @@ if ~BpodSystem.EmulatorMode
     % load auditory stimuli
     fs = Player.SamplingRate;
     
-    if TaskParameters.GUI.AuditoryStimulusType == 1 % click task
-        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, fs, ClickLength, SoundLevel, 'beta');
+    if TaskParameters.GUI.AuditoryStimulusType == 1  % Click task
+        % Get current block bias from TrialData
+        if isfield(BpodSystem.Data.Custom, 'TrialData') && ...
+           isfield(BpodSystem.Data.Custom.TrialData, 'BlockNumber') && ...
+           iTrial <= length(BpodSystem.Data.Custom.TrialData.BlockNumber)
+            currentBlock = BpodSystem.Data.Custom.TrialData.BlockNumber(iTrial);
+        else
+            currentBlock = 1;  % Fallback
+        end
 
-        LeftSoundIndex = 3;
-        Player.loadWaveform(LeftSoundIndex, LeftClickTrain);
+        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == currentBlock;
+        CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
 
-        RightSoundIndex = 4;
-        Player.loadWaveform(RightSoundIndex, RightClickTrain);
+        % Generate click trains with block bias
+        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, fs, ClickLength, SoundLevel, 'beta', CurrentAudBias);
+
+        % Load waveforms
+        Player.loadWaveform(3, LeftClickTrain);   % Left channel
+        Player.loadWaveform(4, RightClickTrain);  % Right channel
     elseif TaskParameters.GUI.AuditoryStimulusType == 2 % freq task
         warning('Error: Frequency stimulus has not been implemented.');
     end
