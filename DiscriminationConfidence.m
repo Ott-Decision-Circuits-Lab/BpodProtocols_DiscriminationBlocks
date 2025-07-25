@@ -48,9 +48,8 @@ while RunSession
     if BpodSystem.EmulatorMode
         % EMULATOR MODE: Generate click trains dynamically
         % Fetch current block's auditory bias from TrialData
-        currentBlock = BpodSystem.Data.Custom.TrialData.BlockNumber(iTrial);  % Already set by InitializeCustomDataFields
-        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == currentBlock;
-        BlockBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Define BlockBias here
+        BlockTableMask = BpodSystem.Data.Custom.TrialData.BlockTableMask;
+        BlockBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Get auditory bias from block struct defined by InitializeCustomDataFields.m
         
         [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta', BlockBias);
     else

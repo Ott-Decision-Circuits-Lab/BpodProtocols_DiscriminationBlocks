@@ -22,8 +22,8 @@ end
 
 % Resize arrays to fit current trial index
 if length(TDTemp.BlockNumber) < iTrial
-    TDTemp.BlockNumber(iTrial) = NaN;
-    TDTemp.BlockTrial(iTrial) = NaN;
+    TDTemp.BlockNumber(iTrial) = NaN; % Add a NaN to the end of the array to match length of iTrial
+    TDTemp.BlockTrial(iTrial) = NaN; % Add a NaN to the end of the array to match length of iTrial
 end
 
 TDTemp.TrialNumber(iTrial) = iTrial;
@@ -51,17 +51,6 @@ else
     TDTemp.CatchTrial(iTrial) = false;
 end
 
-% -----------------------Auditory Bias---------------------- %
-% Now that BlockNumber is known, define BlockTableMask
-BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
-
-% Get current block's auditory bias
-CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
-
-% Override for early trials (Block 1, AudLeftBias = 0.5)
-if iTrial <= TaskParameters.GUI.StartEasyTrials
-    CurrentAudBias = 0.5;
-end
 % ---------------------------------------------------------------------- %
 
 
@@ -102,13 +91,16 @@ else  % First trial
     TDTemp.BlockTrial(iTrial) = 1;
 end
 
+% -----------------------Auditory Bias---------------------- %
+% Now that BlockNumber is known, define BlockTableMask
+TDTemp.BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
+
 % Get current block's auditory bias
-BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial);
+TDTemp.CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(TDTemp.BlockTableMask);
+
 % Override for early trials (Block 1, AudLeftBias = 0.5)
 if iTrial <= TaskParameters.GUI.StartEasyTrials
-    CurrentAudBias = 0.5;
-else
-    CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask); % Bias from block table
+    TDTemp.CurrentAudBias = 0.5;
 end
 
 TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
