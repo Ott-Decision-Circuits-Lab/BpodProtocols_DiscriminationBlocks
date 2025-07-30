@@ -66,14 +66,9 @@ switch Action
         AxesHandles.HandlePsycOlf.Title.String = 'Psychometric Olf';
 
         %% Psyc Auditory
-
-        nBlocks = 3; % Hardcoded number of psychometrics
-        BpodSystem.GUIHandles.OutcomePlot.PsycAud = repmat(line(AxesHandles.HandlePsycAud,[-1 1],[.5 .5], ...,
-            'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',5,'Visible','off'), [1, nBlocks]);
-
-        BpodSystem.GUIHandles.OutcomePlot.PsycAudFit = repmat(line(AxesHandles.HandlePsycAud,[-1 1],[.5 .5], ...,
-            'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',5,'Visible','off'), [1, nBlocks]);
-
+        %hold(AxesHandles.HandlePsycAud,'on')
+        BpodSystem.GUIHandles.OutcomePlot.PsycAud = line(AxesHandles.HandlePsycAud,[-1 1],[.5 .5], 'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',5,'Visible','off');
+        BpodSystem.GUIHandles.OutcomePlot.PsycAudFit = cell(1, 3); % Pre-allocate for 3 known blocks
         AxesHandles.HandlePsycAud.YLim = [-.05 1.05];
         AxesHandles.HandlePsycAud.XLim = [-1.05, 1.05];
         AxesHandles.HandlePsycAud.XLabel.String = 'beta'; % FIGURE OUT UNIT
@@ -304,62 +299,75 @@ switch Action
         
         %% Psych Aud
         if TaskParameters.GUI.ShowPsycAud
-
-            
+        
             LeftNaNs = isnan(LeftChoices);
             AudDV = TDTemp.DecisionVariable(1:numel(LeftChoices));
             DVNaNs = isnan(AudDV);
             AudTrials = TDTemp.AuditoryTrial(1:numel(LeftChoices));
-            
-
-            if isfield(BpodSystem.Data.Custom.TrialData,'BlockNumber')
+        
+            if isfield(BpodSystem.Data.Custom.TrialData, 'BlockNumber')
                 BlockNumber = TDTemp.BlockNumber;
             else
                 BlockNumber = ones(size(LeftChoices));
             end
-
-            setBlocks = reshape(unique(BlockNumber),1,[]);
-            
-            for iBlock = setBlocks(end)
+        
+            setBlocks = reshape(unique(BlockNumber), 1, []);
+        
+            for iBlock = setBlocks  % Loop through all blocks
+                BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == iBlock;
+                currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
+                if abs(currentAudBias - 0.5) < 1e-6
+                    lineColor = [0, 0, 0]; % Black for unbiased
+                elseif abs(currentAudBias - 0.95) < 1e-6
+                    lineColor = [0, 0, 1]; % Blue for left bias
+                elseif abs(currentAudBias - 0.05) < 1e-6
+                    lineColor = [1, 0, 0]; % Red for right bias
+                else
+                    lineColor = [0.8314, 0.5098, 0.4157]; % Fallback
+                end
+        
                 BlockIdx = TDTemp.BlockNumber(1:numel(LeftChoices)) == iBlock;
-                
+        
                 if any(BlockIdx)
                     ValidTrials = AudTrials & ~LeftNaNs & ~DVNaNs & BlockIdx;
                     LeftAudTrialsInBlock = LeftChoices(ValidTrials);
-
-                    AudBin = 8; % Magic number!?
-                    BinIdx = discretize(AudDV, linspace(-1, 1, AudBin+1));
-                    LeftAudBinsInBlock = BinIdx(ValidTrials);
-
-                    PsycY = grpstats(LeftAudTrialsInBlock, LeftAudBinsInBlock, 'mean');
-                    PsycX = unique(LeftAudBinsInBlock) / AudBin*2 -1 -1 / AudBin;
-
-                    if isempty(PsycY) || isempty(PsycX)
-                        continue
-                    end
-                    
-                    if iBlock <= numel(BpodSystem.GUIHandles.OutcomePlot.PsycAud) && ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock))
-                        BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).YData = PsycY;
-                        BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).XData = PsycX;
-                        if sum(ValidTrials) > 5 % Make fit line if there are enough trials
-                            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit.XData = linspace(min(AudDV),max(AudDV),100);
-                            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit.YData = glmval(glmfit(AudDV(ValidTrials),...
-                                LeftAudTrialsInBlock','binomial'),linspace(min(AudDV),max(AudDV),100),'logit');
+        
+                    if ~isempty(LeftAudTrialsInBlock)
+                        % Bin data
+                        AudBin = 8;
+                        BinIdx = discretize(AudDV(ValidTrials), linspace(-1, 1, AudBin+1));
+                        PsycY = grpstats(LeftAudTrialsInBlock, BinIdx, 'mean');
+                        PsycX = unique(BinIdx) / AudBin*2 -1 -1 / AudBin;
+        
+                        % Update or create psychometric point
+                        if iBlock <= numel(BpodSystem.GUIHandles.OutcomePlot.PsycAud) && ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock))
+                            BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).XData = PsycX;
+                            BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).YData = PsycY;
+                        else
+                            BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock) = ...
+                                line(AxesHandles.HandlePsycAud, PsycX, PsycY, 'LineStyle','none','Marker','o', ...
+                                'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', 4);
                         end
-                    else
-                        BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == iBlock;
-                        currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Fetch block-specific bias
-                        bias = tanh(0.3 * (currentAudBias - 0.5) * 2);  % Scale to [-1,1]
-                        % Set line color using auditory bias
-                        lineColor = rgb2hsv([0.8314    0.5098    0.4157]);  % Original color base
-                        lineColor(1) = 0.08 + 0.04 * bias;  % Hue shift based on auditory bias
-                        lineColor(2) = 0.75;                 % Saturation
-                        lineColor(3) = abs(bias);             % Value
-                        lineColor = hsv2rgb(lineColor);
-                        BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock) = line(AxesHandles.HandlePsycAud,PsycX,PsycY, 'LineStyle','none','Marker','o',...
-                            'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',6);
-                        %BpodSystem.GUIHandles.OutcomePlot.PsycOlfAud(iBlock) = line(AxesHandles.HandlePsycAud,[0 100],[.5 .5],'color',lineColor);
+        
+                        % Check if fit line for this block exists
+                        if ~isempty(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock}) && ...
+                            ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock})
+                            % Reuse existing fit line
+                            fitHandle = BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock};
+                        else
+                            % Create new fit line and store in the cell
+                            fitHandle = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'Color', lineColor, 'Visible', 'off');
+                            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock} = fitHandle;
+                        end
                         
+                        % Compute and update fit line
+                        if sum(ValidTrials) > 4
+                            xFit = linspace(min(AudDV(ValidTrials)), max(AudDV(ValidTrials)), 100);
+                            yFit = glmval(glmfit(AudDV(ValidTrials), LeftAudTrialsInBlock', 'binomial'), xFit, 'logit');
+                            set(fitHandle, 'XData', xFit, 'YData', yFit, 'Visible', 'on');
+                        else
+                            set(fitHandle, 'Visible', 'off');
+                        end
                     end
                 end
             end
