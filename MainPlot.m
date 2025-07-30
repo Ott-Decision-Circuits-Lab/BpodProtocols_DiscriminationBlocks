@@ -313,16 +313,22 @@ switch Action
         
             setBlocks = reshape(unique(BlockNumber), 1, []);
         
-            for iBlock = setBlocks  % Loop through all blocks
+            for iBlock = setBlocks
                 BlockTableMask = TaskParameters.GUI.BlockTable.BlockNumber == iBlock;
                 currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
+        
+                % Map bias to fixed fit line index
                 if abs(currentAudBias - 0.5) < 1e-6
-                    lineColor = [0, 0, 0]; % Black for unbiased
+                    fitIndex = 1;
+                    lineColor = [0, 0, 0]; % Black
                 elseif abs(currentAudBias - 0.95) < 1e-6
-                    lineColor = [0, 0, 1]; % Blue for left bias
+                    fitIndex = 2;
+                    lineColor = [0, 0, 1]; % Blue
                 elseif abs(currentAudBias - 0.05) < 1e-6
-                    lineColor = [1, 0, 0]; % Red for right bias
+                    fitIndex = 3;
+                    lineColor = [1, 0, 0]; % Red
                 else
+                    fitIndex = 1;
                     lineColor = [0.8314, 0.5098, 0.4157]; % Fallback
                 end
         
@@ -340,7 +346,8 @@ switch Action
                         PsycX = unique(BinIdx) / AudBin*2 -1 -1 / AudBin;
         
                         % Update or create psychometric point
-                        if iBlock <= numel(BpodSystem.GUIHandles.OutcomePlot.PsycAud) && ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock))
+                        if iBlock <= numel(BpodSystem.GUIHandles.OutcomePlot.PsycAud) && ...
+                           ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock))
                             BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).XData = PsycX;
                             BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock).YData = PsycY;
                         else
@@ -349,24 +356,25 @@ switch Action
                                 'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', 4);
                         end
         
-                        % Check if fit line for this block exists
-                        if ~isempty(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock}) && ...
-                            ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock})
-                            % Reuse existing fit line
-                            fitHandle = BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock};
+                        % Reuse or create fit line based on bias, not iBlock
+                        if fitIndex <= numel(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit) && ...
+                           ~isempty(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{fitIndex}) && ...
+                           ishandle(BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{fitIndex})
+                            fitHandle = BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{fitIndex};
                         else
-                            % Create new fit line and store in the cell
-                            fitHandle = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'Color', lineColor, 'Visible', 'off');
-                            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock} = fitHandle;
+                            fitHandle = line(AxesHandles.HandlePsycAud, [-1 1], [0.5 0.5], 'Color', lineColor, 'Visible', 'off');
+                            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{fitIndex} = fitHandle;
                         end
-                        
-                        % Compute and update fit line
+        
+                        % Update fit line
                         if sum(ValidTrials) > 4
                             xFit = linspace(min(AudDV(ValidTrials)), max(AudDV(ValidTrials)), 100);
                             yFit = glmval(glmfit(AudDV(ValidTrials), LeftAudTrialsInBlock', 'binomial'), xFit, 'logit');
-                            set(fitHandle, 'XData', xFit, 'YData', yFit, 'Visible', 'on');
+                            fitHandle.XData = xFit;
+                            fitHandle.YData = yFit;
+                            fitHandle.Visible = 'on';
                         else
-                            set(fitHandle, 'Visible', 'off');
+                            fitHandle.Visible = 'off';
                         end
                     end
                 end
