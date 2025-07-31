@@ -114,6 +114,7 @@ switch Action
 
     case 'update'
         TDTemp = BpodSystem.Data.Custom.TrialData;
+        MarkerSize = 6;
 
         %% Reposition and hide/show axes
         ShowPlots = [TaskParameters.GUI.ShowPsycOlf,TaskParameters.GUI.ShowPsycAud,TaskParameters.GUI.ShowVevaiometric,...
