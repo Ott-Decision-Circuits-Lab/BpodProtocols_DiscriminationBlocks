@@ -14,6 +14,7 @@ if nargin < 1
     end
 else
     load(DataFile);
+    GUISettings = SessionData.SettingsFile.GUI;
 end
 
 GracePeriodsMax = GUISettings.FeedbackDelayGrace; %assumes same for each trial
