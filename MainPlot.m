@@ -57,7 +57,7 @@ switch Action
         lgd.FontSize = 8;
 
         %% Psyc Olfactory
-        BpodSystem.GUIHandles.OutcomePlot.PsycOlf = line(AxesHandles.HandlePsycOlf,[5 95],[.5 .5], 'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',5,'Visible','off');
+        BpodSystem.GUIHandles.OutcomePlot.PsycOlf = line(AxesHandles.HandlePsycOlf,[5 95],[.5 .5], 'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',MarkerSize,'Visible','off');
         BpodSystem.GUIHandles.OutcomePlot.PsycOlfFit = line(AxesHandles.HandlePsycOlf,[0 100],[.5 .5],'color','k','Visible','off');
         AxesHandles.HandlePsycOlf.YLim = [-.05 1.05];
         AxesHandles.HandlePsycOlf.XLim = 100*[-.05 1.05];
@@ -67,7 +67,7 @@ switch Action
 
         %% Psyc Auditory
         %hold(AxesHandles.HandlePsycAud,'on')
-        BpodSystem.GUIHandles.OutcomePlot.PsycAud = line(AxesHandles.HandlePsycAud,[-1 1],[.5 .5], 'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',5,'Visible','off');
+        BpodSystem.GUIHandles.OutcomePlot.PsycAud = line(AxesHandles.HandlePsycAud,[-1 1],[.5 .5], 'LineStyle','none','Marker','o','MarkerEdge','k','MarkerFace','k', 'MarkerSize',MarkerSize,'Visible','off');
         BpodSystem.GUIHandles.OutcomePlot.PsycAudFit = cell(1, 3); % Pre-allocate for 3 known blocks
         AxesHandles.HandlePsycAud.YLim = [-.05 1.05];
         AxesHandles.HandlePsycAud.XLim = [-1.05, 1.05];
@@ -278,7 +278,7 @@ switch Action
                         lineColor(1) = 0.08+0.04*bias; lineColor(2) = .75; lineColor(3) = abs(bias); lineColor = hsv2rgb(lineColor);
                         %                     lineColor = lineColor + [0 0.3843*(tanh(TDTemp.RewardMagnitude(find(ndxBlock,1),:) * [1 -1]')) 0]
                         BpodSystem.GUIHandles.OutcomePlot.PsycOlf(iBlock) = line(AxesHandles.HandlePsycOlf,setStim,psyc, 'LineStyle','none','Marker','o',...
-                            'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',6);
+                            'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',Markersize - 2);
                         BpodSystem.GUIHandles.OutcomePlot.PsycOlfFit(iBlock) = line(AxesHandles.HandlePsycOlf,[0 100],[.5 .5],'color',lineColor);
                     end
                 end
@@ -318,13 +318,13 @@ switch Action
                 currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
         
                 % Map bias to fixed fit line index
-                if abs(currentAudBias - 0.5) < 1e-6
+                if abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(1)) < 1e-6
                     fitIndex = 1;
                     lineColor = [0, 0, 0]; % Black
-                elseif abs(currentAudBias - 0.95) < 1e-6
+                elseif abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(2)) < 1e-6
                     fitIndex = 2;
                     lineColor = [0, 0, 1]; % Blue
-                elseif abs(currentAudBias - 0.05) < 1e-6
+                elseif abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(3)) < 1e-6
                     fitIndex = 3;
                     lineColor = [1, 0, 0]; % Red
                 else
@@ -353,7 +353,7 @@ switch Action
                         else
                             BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock) = ...
                                 line(AxesHandles.HandlePsycAud, PsycX, PsycY, 'LineStyle','none','Marker','o', ...
-                                'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', 4);
+                                'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', Markersize - 2);
                         end
         
                         % Reuse or create fit line based on bias, not iBlock
