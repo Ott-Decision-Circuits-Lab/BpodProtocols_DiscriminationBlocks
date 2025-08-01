@@ -19,11 +19,15 @@ end
 if ~isfield(TDTemp, 'BlockTrial')
     TDTemp.BlockTrial = NaN(iTrial,1);    % Pre-allocate if field missing
 end
+if ~isfield(TDTemp, 'AudBias')
+    TDTemp.AudBias = NaN(iTrial,1);    % Pre-allocate if field missing
+end
 
 % Resize arrays to fit current trial index
 if length(TDTemp.BlockNumber) < iTrial
     TDTemp.BlockNumber(iTrial) = NaN; % Add a NaN to the end of the array to match length of iTrial
-    TDTemp.BlockTrial(iTrial) = NaN; % Add a NaN to the end of the array to match length of iTrial
+    TDTemp.BlockTrial(iTrial) = NaN;
+    TDTemp.AudBias(iTrial) = NaN;
 end
 
 TDTemp.TrialNumber(iTrial) = iTrial;
@@ -64,10 +68,9 @@ TDTemp.Rewarded(iTrial) = false;
 % -----------------------Block-dependent variables---------------------- %
 % The block determines the signal priors
 if iTrial > 1
-    if iTrial > TaskParameters.GUI.StartEasyTrials
-        % Allow block transitions after easy trials
+    if iTrial > TaskParameters.GUI.StartEasyTrials % Allow block transitions after easy trials
         FinalBlock = max(TaskParameters.GUI.BlockTable.BlockNumber);
-        if TDTemp.BlockNumber(iTrial-1) < FinalBlock
+        if TDTemp.BlockNumber(iTrial-1) < FinalBlock % First three blocks
             BlockNumberMask = TaskParameters.GUI.BlockTable.BlockNumber == TDTemp.BlockNumber(iTrial-1);
             CurrBlockLength = TaskParameters.GUI.BlockTable.BlockLen(BlockNumberMask);
             if TDTemp.BlockTrial(iTrial-1) >= CurrBlockLength  % Block transition
@@ -77,7 +80,7 @@ if iTrial > 1
                 TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1);
                 TDTemp.BlockTrial(iTrial) = TDTemp.BlockTrial(iTrial-1) + 1;
             end
-        else  % Final block
+        else  % Final block, "sticky"
             TDTemp.BlockNumber(iTrial) = TDTemp.BlockNumber(iTrial-1);
             TDTemp.BlockTrial(iTrial) = TDTemp.BlockTrial(iTrial-1) + 1;
         end
@@ -103,10 +106,12 @@ if iTrial <= TaskParameters.GUI.StartEasyTrials
     TDTemp.CurrentAudBias = 0.5;
 end
 
-TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
-TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;
+TDTemp.AudBias(iTrial) = TDTemp.CurrentAudBias;
 
 % ---------------------------------------------------------------------- %
+
+TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
+TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;
 
 
 % -----------------------Stimulus-specific----------------------------- %

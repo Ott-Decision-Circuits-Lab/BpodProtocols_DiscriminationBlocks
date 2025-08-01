@@ -279,7 +279,7 @@ switch Action
                         lineColor(1) = 0.08+0.04*bias; lineColor(2) = .75; lineColor(3) = abs(bias); lineColor = hsv2rgb(lineColor);
                         %                     lineColor = lineColor + [0 0.3843*(tanh(TDTemp.RewardMagnitude(find(ndxBlock,1),:) * [1 -1]')) 0]
                         BpodSystem.GUIHandles.OutcomePlot.PsycOlf(iBlock) = line(AxesHandles.HandlePsycOlf,setStim,psyc, 'LineStyle','none','Marker','o',...
-                            'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',Markersize - 2);
+                            'MarkerEdge',lineColor,'MarkerFace',lineColor, 'MarkerSize',MarkerSize - 2);
                         BpodSystem.GUIHandles.OutcomePlot.PsycOlfFit(iBlock) = line(AxesHandles.HandlePsycOlf,[0 100],[.5 .5],'color',lineColor);
                     end
                 end
@@ -354,7 +354,7 @@ switch Action
                         else
                             BpodSystem.GUIHandles.OutcomePlot.PsycAud(iBlock) = ...
                                 line(AxesHandles.HandlePsycAud, PsycX, PsycY, 'LineStyle','none','Marker','o', ...
-                                'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', Markersize - 2);
+                                'MarkerEdge', lineColor, 'MarkerFace', lineColor, 'MarkerSize', MarkerSize - 2);
                         end
         
                         % Reuse or create fit line based on bias, not iBlock
