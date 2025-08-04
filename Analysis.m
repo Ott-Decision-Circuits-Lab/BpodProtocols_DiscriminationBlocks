@@ -131,6 +131,26 @@ for i = 1:length(LaserCond)
     end
 end
 
+% bias blocks psychometric
+figure
+hold on
+CondColors = {'k', 'b', 'r', [0.5 0.5 0.5]};
+ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
+BlockNumber = SessionData.Custom.TrialData.BlockNumber(CompletedTrials);
+for iBlock = unique(BlockNumber)
+    CurrentDVs = AudDV(BlockNumber == iBlock);
+    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumber == iBlock);
+    BinIdx = discretize(CurrentDVs,linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,AudBin+1));
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',CondColors{iBlock},'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',CondColors{iBlock});
+    xlabel('DV');ylabel('p left')
+end
+hold off
+
 %conditioned psychometric
 subplot(3,4,2)
 hold on
