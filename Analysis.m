@@ -21,7 +21,7 @@ GracePeriodsMax = GUISettings.FeedbackDelayGrace; %assumes same for each trial
 StimTime = GUISettings.AuditoryStimulusTime; %assumes same for each trial
 MinWT = GUISettings.VevaiometricMinWT; %assumes same for each trial
 MaxWT = 10;
-AudBin = 8; %Bins for psychometric
+AudBin = 7; %Bins for psychometric
 AudBinWT = 6;%Bins for vevaiometric
 windowCTA = 150; %window for CTA (ms)
 
