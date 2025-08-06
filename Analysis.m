@@ -132,7 +132,7 @@ for i = 1:length(LaserCond)
 end
 
 % bias blocks psychometric
-figure
+subplot(3,4,2)
 hold on
 CondColors = {'k', 'b', 'r', [0.5 0.5 0.5]};
 ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
@@ -151,34 +151,34 @@ for iBlock = unique(BlockNumber)
 end
 hold off
 
-%conditioned psychometric
-subplot(3,4,2)
-hold on
-%low
-WTmed=median(WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT));
-AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
-if ~isempty(AudDV)
-    ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
-    BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
-    PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
-    PsycX = grpstats(AudDV,BinIdx,'mean');
-    h1=plot(PsycX,PsycY,'ok','MarkerFaceColor',[.5,.5,.5],'MarkerEdgeColor','w','MarkerSize',6);
-    XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
-    YFit = glmval(glmfit(AudDV,ChoiceLeftadj','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
-    plot(XFit,YFit,'Color',[.5,.5,.5]);
-    %high
-    AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
-    ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
-    BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
-    PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
-    PsycX = grpstats(AudDV,BinIdx,'mean');
-    h2=plot(PsycX,PsycY,'ok','MarkerFaceColor','k','MarkerEdgeColor','w','MarkerSize',6);
-    XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
-    YFit = glmval(glmfit(AudDV,ChoiceLeftadj','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
-    plot(XFit,YFit,'k');
-    xlabel('DV');ylabel('p left')
-    legend([h2,h1],{['WT>',num2str(round(WTmed*100)/100)],['WT<',num2str(round(WTmed*100)/100)]},'Units','normalized','Position',[0.333,0.85,0.1,0.1])
-end
+% %conditioned psychometric
+% subplot(3,4,2)
+% hold on
+% %low
+% WTmed=median(WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT));
+% AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
+% if ~isempty(AudDV)
+%     ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
+%     BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
+%     PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
+%     PsycX = grpstats(AudDV,BinIdx,'mean');
+%     h1=plot(PsycX,PsycY,'ok','MarkerFaceColor',[.5,.5,.5],'MarkerEdgeColor','w','MarkerSize',6);
+%     XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
+%     YFit = glmval(glmfit(AudDV,ChoiceLeftadj','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
+%     plot(XFit,YFit,'Color',[.5,.5,.5]);
+%     %high
+%     AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
+%     ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
+%     BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
+%     PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
+%     PsycX = grpstats(AudDV,BinIdx,'mean');
+%     h2=plot(PsycX,PsycY,'ok','MarkerFaceColor','k','MarkerEdgeColor','w','MarkerSize',6);
+%     XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
+%     YFit = glmval(glmfit(AudDV,ChoiceLeftadj','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
+%     plot(XFit,YFit,'k');
+%     xlabel('DV');ylabel('p left')
+%     legend([h2,h1],{['WT>',num2str(round(WTmed*100)/100)],['WT<',num2str(round(WTmed*100)/100)]},'Units','normalized','Position',[0.333,0.85,0.1,0.1])
+% end
 
 %calibration
 subplot(3,4,3)
