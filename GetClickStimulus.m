@@ -36,7 +36,7 @@ switch Mode
             AuditoryAlpha = TaskParameters.GUI.AuditoryAlpha/4;
         end
         
-        BetaRatio = (1 - min(0.9, max(0.1, BlockBias))) / min(0.9, max(0.1, BlockBias));
+        BetaRatio = min(0.9, max(0.1, BlockBias)) / (1 - min(0.9, max(0.1, BlockBias)));
         %use a = ratio*b to yield E[X] = LeftBiasAud using Beta(a,b) pdf
         %cut off between 0.1-0.9 to prevent extreme values (only one side) and div by zero
         BetaA =  (2*AuditoryAlpha*BetaRatio) / (1+BetaRatio); %make a,b symmetric around AuditoryAlpha to make B symmetric
