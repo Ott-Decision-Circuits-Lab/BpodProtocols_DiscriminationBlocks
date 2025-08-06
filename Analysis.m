@@ -41,6 +41,7 @@ CatchTrial = SessionData.Custom.TrialData.CatchTrial((1:nTrials-1));
 Feedback = SessionData.Custom.TrialData.Feedback(1:nTrials-1);
 Correct = SessionData.Custom.TrialData.ChoiceCorrect(1:nTrials-1);
 WT =  SessionData.Custom.TrialData.FeedbackTime(1:nTrials-1);
+BlockNumber = SessionData.Custom.TrialData.BlockNumber(1:nTrials-1);
 if isfield(SessionData.Custom,'LaserTrial')
     LaserTrial =  SessionData.Custom.TrialData.LaserTrial(1:nTrials-1);
 else
@@ -136,10 +137,10 @@ subplot(3,4,2)
 hold on
 CondColors = {'k', 'b', 'r', [0.5 0.5 0.5]};
 ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
-BlockNumber = SessionData.Custom.TrialData.BlockNumber(CompletedTrials);
-for iBlock = unique(BlockNumber)
-    CurrentDVs = AudDV(BlockNumber == iBlock);
-    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumber == iBlock);
+BlockNumberCompleted = SessionData.Custom.TrialData.BlockNumber(CompletedTrials);
+for iBlock = unique(BlockNumberCompleted)
+    CurrentDVs = AudDV(BlockNumberCompleted == iBlock);
+    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == iBlock);
     BinIdx = discretize(CurrentDVs,linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,AudBin+1));
     PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
     PsycX = grpstats(CurrentDVs,BinIdx,'mean');
@@ -150,6 +151,24 @@ for iBlock = unique(BlockNumber)
     xlabel('DV');ylabel('p left')
 end
 hold off
+
+%DV distribution
+subplot(3,4,3)
+hold on
+StartPosition = 1;
+EndPosition = 0;
+for iBlock = unique(BlockNumber)
+    CurrentDVs = DV(BlockNumber == iBlock);
+    EndPosition = EndPosition + numel(CurrentDVs);
+    plot(StartPosition:EndPosition, CurrentDVs, 'o', 'Color', CondColors{iBlock}, 'MarkerSize', 2)
+    StartPosition = StartPosition + numel(CurrentDVs);
+end
+BlockLengths = SessionData.SettingsFile.GUI.BlockTable.BlockLen;
+xticks([0 BlockLengths(1) BlockLengths(1)+BlockLengths(2) BlockLengths(1)+BlockLengths(2)+BlockLengths(3) nTrials])
+xlim([0 nTrials])
+xlabel("iTrial"); ylabel("Aud DV");
+hold off
+
 
 % %conditioned psychometric
 % subplot(3,4,2)
@@ -181,76 +200,76 @@ hold off
 % end
 
 %calibration
-subplot(3,4,3)
-hold on
-xlabel('Waiting time (s)');ylabel('p correct')
-WTBin=5;
-ColorsCorrect = {[.1,.9,.1],[.1,.8,.6]};
-ColorsError = {[.9,.1,.1],[.9,.1,.6]};
+% subplot(3,4,3)
+% hold on
+% xlabel('Waiting time (s)');ylabel('p correct')
+% WTBin=5;
+% ColorsCorrect = {[.1,.9,.1],[.1,.8,.6]};
+% ColorsError = {[.9,.1,.1],[.9,.1,.6]};
 
-for i =1:length(LaserCond)
-    WTCatch = WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT & LaserTrial==LaserCond(i));
-    if ~isempty(WTCatch)
-        BinIdx = discretize(WTCatch,linspace(min(WTCatch)-10*eps,max(WTCatch)+10*eps,WTBin+1));
-        WTX = grpstats(WTCatch,BinIdx,'mean');
-        PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i)),BinIdx,'mean');
-        plot(WTX,PerfY,'Color',CondColors{i},'LineWidth',2);
-        [r,p]=corr(WTCatch',Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i))','type','Spearman');
-        text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.07*i,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)],'Color',CondColors{i});
-    end
-end
-
-
-%Vevaiometric
-subplot(3,4,4)
-hold on
-xlabel('DV');ylabel('Waiting time (s)')
-AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<MaxWT&WT>MinWT);
-Rcatch=cell(1,2);Pcatch=cell(1,2);Rerror=cell(1,2);Perror=cell(1,2);
-%for confidence auc
-auc = nan(length(LaserCond),1);
-auc_sem = nan(length(LaserCond),1);
-for i =1:length(LaserCond)
-    
-    WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
-    DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
-    if ~isempty(DVCatch)
-        BinIdx = discretize(DVCatch,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
-        if ~all(isnan(BinIdx))
-            WTCatchY = grpstats(WTCatch,BinIdx,'mean');
-            DVCatchX = grpstats(DVCatch,BinIdx,'mean');
-            plot(DVCatchX,WTCatchY,'Color',ColorsCorrect{i},'LineWidth',2)
-        end
-        WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
-        DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
-        BinIdx = discretize(DVError,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
-        if ~all(isnan(BinIdx))
-            WTErrorY = grpstats(WTError,BinIdx,'mean');
-            DVErrorX = grpstats(DVError,BinIdx,'mean');
-            plot(DVErrorX,WTErrorY,'Color',ColorsError{i},'LineWidth',2)
-        end
-        
-        plot(DVCatch,WTCatch,'o','MarkerSize',2,'MarkerFaceColor',ColorsCorrect{i},'Color',ColorsCorrect{i})
-        plot(DVError,WTError,'o','MarkerSize',2,'MarkerFaceColor',ColorsError{i},'Color',ColorsError{i})
-        legend('Correct Catch','Error','Location','best')
-        %evaluate vevaiometric
-        [Rc,Pc] = EvaluateVevaiometric(DVCatch,WTCatch);
-        [Re,Pe] = EvaluateVevaiometric(DVError,WTError);
-        Rcatch{i}=Rc;Pcatch{i}=Pc;Rerror{i}=Re;Perror{i}=Pe;
-        %confidence auc
-        %[auc(i),~,auc_sem(i)] = rocarea_torben(WTCatch,WTError,'bootstrap',200);
-        
-    end
-end
-for i =1:length(LaserCond)
-    if ~isempty(Rcatch{i}) && ~isempty(Pcatch{i}) && ~isempty(Rerror{i}) && ~isempty(Perror{i})
-        unit = max(get(gca,'YLim'))-min(get(gca,'YLim'));
-        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.1+(i-1)*.5),['r_l=',num2str(round(Rcatch{i}(1)*100)/100),' r_r=',num2str(round(Rcatch{i}(2)*100)/100)],'Color',ColorsCorrect{i});
-        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.2+(i-1)*.5),['r=',num2str(round(Rcatch{i}(3)*100)/100),', p=',num2str(round(Pcatch{i}(3)*100)/100)],'Color',ColorsCorrect{i});
-        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.3+(i-1)*.5),['r_l=',num2str(round(Rerror{i}(1)*100)/100),' r_r=',num2str(round(Rerror{i}(2)*100)/100)],'Color',ColorsError{i});
-        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.4+(i-1)*.5),['r=',num2str(round(Rerror{i}(3)*100)/100),', p=',num2str(round(Perror{i}(3)*100)/100)],'Color',ColorsError{i});
-    end
-end
+% for i =1:length(LaserCond)
+%     WTCatch = WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT & LaserTrial==LaserCond(i));
+%     if ~isempty(WTCatch)
+%         BinIdx = discretize(WTCatch,linspace(min(WTCatch)-10*eps,max(WTCatch)+10*eps,WTBin+1));
+%         WTX = grpstats(WTCatch,BinIdx,'mean');
+%         PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i)),BinIdx,'mean');
+%         plot(WTX,PerfY,'Color',CondColors{i},'LineWidth',2);
+%         [r,p]=corr(WTCatch',Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i))','type','Spearman');
+%         text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.07*i,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)],'Color',CondColors{i});
+%     end
+% end
+% 
+% 
+% %Vevaiometric
+% subplot(3,4,4)
+% hold on
+% xlabel('DV');ylabel('Waiting time (s)')
+% AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<MaxWT&WT>MinWT);
+% Rcatch=cell(1,2);Pcatch=cell(1,2);Rerror=cell(1,2);Perror=cell(1,2);
+% %for confidence auc
+% auc = nan(length(LaserCond),1);
+% auc_sem = nan(length(LaserCond),1);
+% for i =1:length(LaserCond)
+% 
+%     WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+%     DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+%     if ~isempty(DVCatch)
+%         BinIdx = discretize(DVCatch,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+%         if ~all(isnan(BinIdx))
+%             WTCatchY = grpstats(WTCatch,BinIdx,'mean');
+%             DVCatchX = grpstats(DVCatch,BinIdx,'mean');
+%             plot(DVCatchX,WTCatchY,'Color',ColorsCorrect{i},'LineWidth',2)
+%         end
+%         WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+%         DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+%         BinIdx = discretize(DVError,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+%         if ~all(isnan(BinIdx))
+%             WTErrorY = grpstats(WTError,BinIdx,'mean');
+%             DVErrorX = grpstats(DVError,BinIdx,'mean');
+%             plot(DVErrorX,WTErrorY,'Color',ColorsError{i},'LineWidth',2)
+%         end
+% 
+%         plot(DVCatch,WTCatch,'o','MarkerSize',2,'MarkerFaceColor',ColorsCorrect{i},'Color',ColorsCorrect{i})
+%         plot(DVError,WTError,'o','MarkerSize',2,'MarkerFaceColor',ColorsError{i},'Color',ColorsError{i})
+%         legend('Correct Catch','Error','Location','best')
+%         %evaluate vevaiometric
+%         [Rc,Pc] = EvaluateVevaiometric(DVCatch,WTCatch);
+%         [Re,Pe] = EvaluateVevaiometric(DVError,WTError);
+%         Rcatch{i}=Rc;Pcatch{i}=Pc;Rerror{i}=Re;Perror{i}=Pe;
+%         %confidence auc
+%         %[auc(i),~,auc_sem(i)] = rocarea_torben(WTCatch,WTError,'bootstrap',200);
+% 
+%     end
+% end
+% for i =1:length(LaserCond)
+%     if ~isempty(Rcatch{i}) && ~isempty(Pcatch{i}) && ~isempty(Rerror{i}) && ~isempty(Perror{i})
+%         unit = max(get(gca,'YLim'))-min(get(gca,'YLim'));
+%         text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.1+(i-1)*.5),['r_l=',num2str(round(Rcatch{i}(1)*100)/100),' r_r=',num2str(round(Rcatch{i}(2)*100)/100)],'Color',ColorsCorrect{i});
+%         text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.2+(i-1)*.5),['r=',num2str(round(Rcatch{i}(3)*100)/100),', p=',num2str(round(Pcatch{i}(3)*100)/100)],'Color',ColorsCorrect{i});
+%         text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.3+(i-1)*.5),['r_l=',num2str(round(Rerror{i}(1)*100)/100),' r_r=',num2str(round(Rerror{i}(2)*100)/100)],'Color',ColorsError{i});
+%         text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.4+(i-1)*.5),['r=',num2str(round(Rerror{i}(3)*100)/100),', p=',num2str(round(Perror{i}(3)*100)/100)],'Color',ColorsError{i});
+%     end
+% end
 
 
 %reaction time
