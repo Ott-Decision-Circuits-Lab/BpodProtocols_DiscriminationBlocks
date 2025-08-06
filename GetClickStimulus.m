@@ -42,7 +42,7 @@ switch Mode
         BetaA =  (2*AuditoryAlpha*BetaRatio) / (1+BetaRatio); %make a,b symmetric around AuditoryAlpha to make B symmetric
         BetaB = (AuditoryAlpha-BetaA) + AuditoryAlpha;
         
-        if rand(1,1) < TaskParameters.GUI.Percent50Fifty && ~TDTemp.CatchTrial(iTrial)
+        if rand(1,1) < TaskParameters.GUI.Percent50Fifty && iTrial > TaskParameters.GUI.StartEasyTrials
             BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = 0.5;  % 50/50 trials
         else
             BpodSystem.Data.Custom.TrialData.AuditoryOmega(iTrial) = betarnd(max(0,BetaA), max(0,BetaB),1,1);
