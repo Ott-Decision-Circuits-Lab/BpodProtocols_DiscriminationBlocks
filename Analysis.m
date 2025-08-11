@@ -273,109 +273,109 @@ hold off
 
 
 %reaction time
-panel=subplot(3,4,5);
-hold on
-if sum(CompletedTrials)>1
-    center = linspace(min(ST(CompletedTrials)),max(ST(CompletedTrials)),15);
-    h=hist(ST(CompletedTrials),center);
-    if ~isempty(h)
-        h=h/sum(h);
-        % ylabel('p')
-        plot(abs(ExperiencedDV(CompletedTrials)),ST(CompletedTrials),'.k');
-        xlabel('DV');ylabel('Sampling time (s)')
-        ax2 = axes('Position',panel.Position);panel.Position=ax2.Position;
-        plot(h,center,'r','LineWidth',2,'Parent',ax2);
-        ax2.YAxis.Visible='off';ax2.XAxisLocation='top';ax2.Color='none';ax2.XAxis.FontSize = 8;ax2.XAxis.Color=[1,0,0];ax2.XLabel.String = 'p';ax2.XLabel.Position=[0.15,3.1,0];
-        [r,p]=corr(abs(ExperiencedDV(CompletedTrials&~isnan(ST)))',ST(CompletedTrials&~isnan(ST))','type','Spearman');
-        text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.1,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
-        
-    end
-end
+% panel=subplot(3,4,5);
+% hold on
+% if sum(CompletedTrials)>1
+%     center = linspace(min(ST(CompletedTrials)),max(ST(CompletedTrials)),15);
+%     h=hist(ST(CompletedTrials),center);
+%     if ~isempty(h)
+%         h=h/sum(h);
+%         % ylabel('p')
+%         plot(abs(ExperiencedDV(CompletedTrials)),ST(CompletedTrials),'.k');
+%         xlabel('DV');ylabel('Sampling time (s)')
+%         ax2 = axes('Position',panel.Position);panel.Position=ax2.Position;
+%         plot(h,center,'r','LineWidth',2,'Parent',ax2);
+%         ax2.YAxis.Visible='off';ax2.XAxisLocation='top';ax2.Color='none';ax2.XAxis.FontSize = 8;ax2.XAxis.Color=[1,0,0];ax2.XLabel.String = 'p';ax2.XLabel.Position=[0.15,3.1,0];
+%         [r,p]=corr(abs(ExperiencedDV(CompletedTrials&~isnan(ST)))',ST(CompletedTrials&~isnan(ST))','type','Spearman');
+%         text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.1,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
+%         
+%     end
+% end
 
-%grace periods
-subplot(3,4,6)
-%remove "full" grace periods
-GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
-GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
-GracePeriodsL(GracePeriodsL>=GracePeriodsMax-0.001 & GracePeriodsL<=GracePeriodsMax+0.001 )=[];
-center = 0:0.025:max(GracePeriods);
-if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
-    g = hist(GracePeriods,center);g=g/sum(g);
-    gl = hist(GracePeriodsL,center);gl=gl/sum(gl);
-    gr = hist(GracePeriodsR,center);gr=gr/sum(gr);
-    hold on
-    plot(center,g,'k','LineWidth',2)
-    plot(center,gl,'m','LineWidth',1)
-    plot(center,gr,'c','LineWidth',1)
-    xlabel('Grace period (s)');ylabel('p');
-    text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['n=',num2str(sum(~isnan(GracePeriods))),'(',num2str(sum(~isnan(GracePeriodsL))),'/',num2str(sum(~isnan(GracePeriodsR))),')']);
-end
-
-%waiting time distributions
-ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
-if length(LaserCond)==1
-    %no laser
-    subplot(3,4,7)
-    hold on
-    xlabel('waiting time (s)'); ylabel ('n trials');
-    WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1);
-    WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0);
-    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',[.2,.2,1]);
-    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',[.8,.6,.1]);
-
-    meanWTL = nanmean(WTnoFeedbackL);
-    meanWTR = nanmean(WTnoFeedbackR);
-    line([meanWTL,meanWTL],get(gca,'YLim'),'Color',[.2,.2,1]);
-    line([meanWTR,meanWTR],get(gca,'YLim'),'Color',[.8,.6,.1]);
-    text(meanWTL-1,1.05*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',[.2,.2,1]);
-    text(meanWTL-1,1.15*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',[.8,.6,.1]);
-    
-    PshortWTL = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
-    PshortWTR = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
-    text(max(get(gca,'XLim'))+0.03,0.85*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
-    
-else%laser
-    subplot(3,4,7)
-    hold on
-    xlabel('waiting time (s)'); ylabel ('n trials');
-    subplot(3,4,8)
-    hold on
-    xlabel('waiting time (s)'); ylabel ('n trials');
-    PshortWTL=cell(1,2);PshortWTR=cell(1,2);
-    for i =1:length(LaserCond)
-    
-    WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1 & LaserTrial==LaserCond(i));
-    WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0 & LaserTrial==LaserCond(i));
-     meanWTL = nanmean(WTnoFeedbackL);
-    meanWTR = nanmean(WTnoFeedbackR);
-    subplot(3,4,7)
-    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',ColorsCond{i});
-    line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
-    text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
-    subplot(3,4,8)
-    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',ColorsCond{i});
-    line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
-    text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
-
-    PshortWTL{i} = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
-    PshortWTR{i} = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
-    
-    end
-    for i =1:length(LaserCond)
-        text(max(get(gca,'XLim'))+0.03,(0.85/i)*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL{i}*100)/100),', R_{2}=',num2str(round(PshortWTR{i}*100)/100)],'Color',ColorsCond{i});
-    end
-end
-
-%confidence index
-subplot(3,4,9)
-hold on
-for i =1:length(LaserCond)
-    errorbar(1:size(auc,2),auc(i,:),auc_sem(i,:),'o','MarkerFaceColor',CondColors{i},'MarkerEdgeColor',CondColors{i},'LineWidth',2,'Color',CondColors{i})
-end
-xlabel('DV quantile')
-ylabel('AUC')
-
-RedoTicks(gcf);
+% %grace periods
+% subplot(3,4,6)
+% %remove "full" grace periods
+% GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
+% GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
+% GracePeriodsL(GracePeriodsL>=GracePeriodsMax-0.001 & GracePeriodsL<=GracePeriodsMax+0.001 )=[];
+% center = 0:0.025:max(GracePeriods);
+% if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
+%     g = hist(GracePeriods,center);g=g/sum(g);
+%     gl = hist(GracePeriodsL,center);gl=gl/sum(gl);
+%     gr = hist(GracePeriodsR,center);gr=gr/sum(gr);
+%     hold on
+%     plot(center,g,'k','LineWidth',2)
+%     plot(center,gl,'m','LineWidth',1)
+%     plot(center,gr,'c','LineWidth',1)
+%     xlabel('Grace period (s)');ylabel('p');
+%     text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['n=',num2str(sum(~isnan(GracePeriods))),'(',num2str(sum(~isnan(GracePeriodsL))),'/',num2str(sum(~isnan(GracePeriodsR))),')']);
+% end
+% 
+% %waiting time distributions
+% ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
+% if length(LaserCond)==1
+%     %no laser
+%     subplot(3,4,7)
+%     hold on
+%     xlabel('waiting time (s)'); ylabel ('n trials');
+%     WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1);
+%     WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0);
+%     histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',[.2,.2,1]);
+%     histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',[.8,.6,.1]);
+% 
+%     meanWTL = nanmean(WTnoFeedbackL);
+%     meanWTR = nanmean(WTnoFeedbackR);
+%     line([meanWTL,meanWTL],get(gca,'YLim'),'Color',[.2,.2,1]);
+%     line([meanWTR,meanWTR],get(gca,'YLim'),'Color',[.8,.6,.1]);
+%     text(meanWTL-1,1.05*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',[.2,.2,1]);
+%     text(meanWTL-1,1.15*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',[.8,.6,.1]);
+%     
+%     PshortWTL = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
+%     PshortWTR = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
+%     text(max(get(gca,'XLim'))+0.03,0.85*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
+%     
+% else%laser
+%     subplot(3,4,7)
+%     hold on
+%     xlabel('waiting time (s)'); ylabel ('n trials');
+%     subplot(3,4,8)
+%     hold on
+%     xlabel('waiting time (s)'); ylabel ('n trials');
+%     PshortWTL=cell(1,2);PshortWTR=cell(1,2);
+%     for i =1:length(LaserCond)
+%     
+%     WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1 & LaserTrial==LaserCond(i));
+%     WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0 & LaserTrial==LaserCond(i));
+%      meanWTL = nanmean(WTnoFeedbackL);
+%     meanWTR = nanmean(WTnoFeedbackR);
+%     subplot(3,4,7)
+%     histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+%     line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
+%     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
+%     subplot(3,4,8)
+%     histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+%     line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
+%     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
+% 
+%     PshortWTL{i} = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
+%     PshortWTR{i} = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
+%     
+%     end
+%     for i =1:length(LaserCond)
+%         text(max(get(gca,'XLim'))+0.03,(0.85/i)*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL{i}*100)/100),', R_{2}=',num2str(round(PshortWTR{i}*100)/100)],'Color',ColorsCond{i});
+%     end
+% end
+% 
+% %confidence index
+% subplot(3,4,9)
+% hold on
+% for i =1:length(LaserCond)
+%     errorbar(1:size(auc,2),auc(i,:),auc_sem(i,:),'o','MarkerFaceColor',CondColors{i},'MarkerEdgeColor',CondColors{i},'LineWidth',2,'Color',CondColors{i})
+% end
+% xlabel('DV quantile')
+% ylabel('AUC')
+% 
+% RedoTicks(gcf);
 
 end
 
