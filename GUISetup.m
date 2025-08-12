@@ -7,6 +7,8 @@ if isempty(fieldnames(TaskParameters))
     %% General
     TaskParameters.GUI.EphysSession = false;
     TaskParameters.GUIMeta.EphysSession.Style = 'checkbox';
+    TaskParameters.GUI.PharmacologyOn = false;
+    TaskParameters.GUIMeta.PharmacologyOn.Style = 'checkbox';
     TaskParameters.GUI.SessionDescription = 'abc';
     TaskParameters.GUIMeta.SessionDescription.Style = 'edittext';
     TaskParameters.GUI.ITI = 1; 

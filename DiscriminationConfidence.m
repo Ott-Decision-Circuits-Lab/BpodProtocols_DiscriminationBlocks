@@ -34,6 +34,19 @@ if TaskParameters.GUI.Photometry
     [FigNidaq1,FigNidaq2]=InitializeNidaq();
 end
 
+try
+    if TaskParameters.GUI.PharmacologyOn
+        prompt = {'Drug name:','Dose:', 'Dosage unit'};
+        dlgtitle = 'Pharmacology';
+        dims = [1 35];
+        definput = {'1x PBS', '1', 'ml/kg i.p.'};
+        drugInfo = inputdlg(prompt,dlgtitle,dims, definput);
+        BpodSystem.Data.Custom.Pharmacology = drugInfo;
+    end
+catch
+    warning("Pharmacology setup failed.")
+end
+
 InitializePlots();
 
 % --------------------------Main loop------------------------------ %
