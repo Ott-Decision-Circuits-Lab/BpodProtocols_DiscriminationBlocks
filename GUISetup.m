@@ -14,7 +14,7 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI.ITI = 1; 
     TaskParameters.GUI.PreITI = 0; 
     TaskParameters.GUI.CenterWaitMax = 20; 
-    TaskParameters.GUI.RewardAmount = 25;
+    TaskParameters.GUI.RewardAmount = 20;
     TaskParameters.GUI.DrinkingTime = 5;
     TaskParameters.GUI.DrinkingGrace = 0.1;
     TaskParameters.GUI.ChoiceDeadLine = 3;
