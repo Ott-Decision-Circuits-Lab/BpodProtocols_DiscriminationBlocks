@@ -28,6 +28,37 @@ switch Mode
         
         LeftClickTrain = GeneratePoissonClickTrain(LeftClickRate, Duration, SamplingRate, ClickLength);
         RightClickTrain = GeneratePoissonClickTrain(RightClickRate, Duration, SamplingRate, ClickLength);
+
+    case 'biasedUniform'
+
+        % Determine the probability of left-leaning and right-leaning signals
+        LeftProb = BlockBias;
+        RightProb = 1 - BlockBias;
+
+        % Generate a random number to determine the side of the bias
+        if rand(1,1) < LeftProb
+            % Left-leaning signal
+            BiasSide = 'left';
+        else
+            % Right-leaning signal
+            BiasSide = 'right';
+        end
+
+        % Generate a uniform distribution of difficulty levels
+        DifficultyLevel = rand(1,1);
+
+        % Determine the click rates based on the difficulty level and bias side
+        if strcmp(BiasSide, 'left')
+            LeftClickRate = ceil(DifficultyLevel * 100);
+            RightClickRate = 100 - LeftClickRate;
+        else
+            RightClickRate = ceil(DifficultyLevel * 100);
+            LeftClickRate = 100 - RightClickRate;
+        end
+
+        LeftClickTrain = GeneratePoissonClickTrain(LeftClickRate, Duration, SamplingRate, ClickLength);
+        RightClickTrain = GeneratePoissonClickTrain(RightClickRate, Duration, SamplingRate, ClickLength);
+
   
     case 'beta'
         if iTrial > TaskParameters.GUI.StartEasyTrials
