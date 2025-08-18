@@ -162,15 +162,6 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUIMeta.BlockTable.String = 'Block structure';
     TaskParameters.GUIMeta.BlockTable.ColumnLabel = {'Block#','Block Length','Aud Left Bias'};
     TaskParameters.GUIPanels.BlockStructure = {'BlockTable', 'RandomizeBiasBlocks'};
-
-    if TaskParameters.GUI.RandomizeBiasBlocks
-        % Get the indices for blocks 2 and 3
-        biasIndices = 2:3;
-        % Randomly permute these indices
-        randIndices = randperm(length(biasIndices));
-        % Apply the permutation to the AudLeftBias array
-        TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
-    end
     
     %% Plots
     %Show Plots

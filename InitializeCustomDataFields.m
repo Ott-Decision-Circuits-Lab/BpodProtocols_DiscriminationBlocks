@@ -110,6 +110,16 @@ TDTemp.AudBias(iTrial) = TDTemp.CurrentAudBias;
 
 % ---------------------------------------------------------------------- %
 
+% -----------------------Auditory Bias Randomization---------------------- %
+if TaskParameters.GUI.RandomizeBiasBlocks
+    % Get the indices for blocks 2 and 3
+    biasIndices = 2:3;
+    % Randomly permute these indices
+    randIndices = randperm(length(biasIndices));
+    % Apply the permutation to the AudLeftBias array
+    TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
+end
+
 TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
 TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;
 

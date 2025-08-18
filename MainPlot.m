@@ -69,9 +69,22 @@ switch Action
         %hold(AxesHandles.HandlePsycAud,'on')
         BpodSystem.GUIHandles.OutcomePlot.PsycAud = cell(1, 3);
         BpodSystem.GUIHandles.OutcomePlot.PsycAudFit = cell(1, 3); % Pre-allocate for 3 known blocks
-        BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{1} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', 'k', 'MarkerSize', MarkerSize - 2, 'Visible','off');
-        BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{2} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', 'b', 'MarkerSize', MarkerSize - 2, 'Visible','off');
-        BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{3} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', 'r', 'MarkerSize', MarkerSize - 2, 'Visible','off');
+        for iBlock = 1:3
+            currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(iBlock);
+            if abs(currentAudBias - 0.5) < 1e-6
+                lineColor = [0, 0, 0]; % Black for unbiased
+            elseif currentAudBias > 0.5
+                lineColor = [1, 0, 0]; % Red for left bias (> 0.5)
+            elseif currentAudBias < 0.5
+                lineColor = [0, 0, 1]; % Blue for right bias (< 0.5)
+            else
+                lineColor = [0.8314, 0.5098, 0.4157]; % Fallback
+            end
+        
+            % Initialize fit lines with dynamic colors
+            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', lineColor, 'MarkerSize', MarkerSize - 2, 'Visible','off');
+        end
+        
         AxesHandles.HandlePsycAud.YLim = [-.05 1.05];
         AxesHandles.HandlePsycAud.XLim = [-1.05, 1.05];
         AxesHandles.HandlePsycAud.XLabel.String = 'beta'; % FIGURE OUT UNIT
