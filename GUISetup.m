@@ -9,6 +9,9 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUIMeta.EphysSession.Style = 'checkbox';
     TaskParameters.GUI.PharmacologyOn = false;
     TaskParameters.GUIMeta.PharmacologyOn.Style = 'checkbox';
+    TaskParameters.GUI.RandomizeBiasBlocks = false;
+    TaskParameters.GUIMeta.RandomizeBiasBlocks.Style = 'checkbox';
+    TaskParameters.GUIMeta.RandomizeBiasBlocks.String = 'Randomize blocks 2 and 3';
     TaskParameters.GUI.SessionDescription = 'abc';
     TaskParameters.GUIMeta.SessionDescription.Style = 'edittext';
     TaskParameters.GUI.ITI = 1; 
@@ -158,7 +161,16 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUIMeta.BlockTable.Style = 'table';
     TaskParameters.GUIMeta.BlockTable.String = 'Block structure';
     TaskParameters.GUIMeta.BlockTable.ColumnLabel = {'Block#','Block Length','Aud Left Bias'};
-    TaskParameters.GUIPanels.BlockStructure = {'BlockTable'};
+    TaskParameters.GUIPanels.BlockStructure = {'BlockTable', 'RandomizeBiasBlocks'};
+
+    if TaskParameters.GUI.RandomizeBiasBlocks
+        % Get the indices for blocks 2 and 3
+        biasIndices = 2:3;
+        % Randomly permute these indices
+        randIndices = randperm(length(biasIndices));
+        % Apply the permutation to the AudLeftBias array
+        TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
+    end
     
     %% Plots
     %Show Plots
