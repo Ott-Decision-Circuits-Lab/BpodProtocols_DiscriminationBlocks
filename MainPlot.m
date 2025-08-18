@@ -320,21 +320,22 @@ switch Action
             for iBias = 1:numel(uniqueBiases)
                 currentAudBias = uniqueBiases(iBias);
         
-                % Map bias to fixed fit line index
-                if abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(1)) < 1e-6
+                % Determine color and fitIndex based on AudLeftBias value
+                if abs(currentAudBias - 0.5) < 1e-6
                     fitIndex = 1;
-                    lineColor = [0, 0, 0]; % Black
-                elseif abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(2)) < 1e-6
+                    lineColor = [0, 0, 0]; % Black for unbiased (0.5)
+                elseif currentAudBias > 0.5
                     fitIndex = 2;
-                    lineColor = [0, 0, 1]; % Blue
-                elseif abs(currentAudBias - TaskParameters.GUI.BlockTable.AudLeftBias(3)) < 1e-6
+                    lineColor = [1, 0, 0]; % Red for left bias (> 0.5)
+                elseif currentAudBias < 0.5
                     fitIndex = 3;
-                    lineColor = [1, 0, 0]; % Red
+                    lineColor = [0, 0, 1]; % Blue for right bias (< 0.5)
                 else
+                    % Fallback for unexpected bias values
                     fitIndex = 1;
-                    lineColor = [0.8314, 0.5098, 0.4157]; % Fallback
+                    lineColor = [0.8314, 0.5098, 0.4157]; % Default color
                 end
-        
+                        
                 % Aggregate all trials from blocks with this bias
                 blocksWithBias = find(abs([TaskParameters.GUI.BlockTable.AudLeftBias] - currentAudBias) < 1e-6);
                 BlockIdx = ismember(BlockNumber(1:numel(LeftChoices)), blocksWithBias);
