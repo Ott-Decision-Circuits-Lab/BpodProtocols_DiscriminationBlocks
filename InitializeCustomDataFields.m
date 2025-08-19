@@ -8,6 +8,36 @@ global TaskParameters
 
 if iTrial == 1
     BpodSystem.Data.Custom.TrialData = [];
+    % Create a mapping from bias values to fitIndex
+    uniqueBiases = unique(TaskParameters.GUI.BlockTable.AudLeftBias, 'stable');
+    BpodSystem.Data.Custom.BiasToFitIndexMap = containers.Map('KeyType', 'double', 'ValueType', 'double');
+    for i = 1:numel(uniqueBiases)
+        BpodSystem.Data.Custom.BiasToFitIndexMap(uniqueBiases(i)) = i;
+    end
+
+    black = [0, 0, 0]; % 0.5 left bias
+    red = [1, 0, 0]; % e.g. 0.7 left bias
+    blue = [0, 0, 1]; % e.g. 0.3 left bias
+    BpodSystem.Data.Custom.FitIndexToColorMap = vertcat(black, red, blue);
+
+    % -----------------------Auditory Bias Randomization---------------------- %
+    if TaskParameters.GUI.RandomizeBiasBlocks
+        % Get the indices for blocks 2 and 3
+        biasIndices = 2:3;
+        % Randomly permute these indices
+        randIndices = randperm(length(biasIndices));
+        %randIndices = [2 1]; % Force inversion for tests
+        if diff(randIndices) > 0
+            BpodSystem.Data.Custom.invertBlocks = false;
+        else
+            BpodSystem.Data.Custom.invertBlocks = true;
+        end
+        % Apply the permutation to the AudLeftBias array and color map
+        TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
+        BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices, :) = BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices(randIndices), :);
+    end
+
+    
 end
 
 TDTemp = BpodSystem.Data.Custom.TrialData; % temporary container
@@ -107,18 +137,6 @@ if iTrial <= TaskParameters.GUI.StartEasyTrials
 end
 
 TDTemp.AudBias(iTrial) = TDTemp.CurrentAudBias;
-
-% ---------------------------------------------------------------------- %
-
-% -----------------------Auditory Bias Randomization---------------------- %
-if TaskParameters.GUI.RandomizeBiasBlocks
-    % Get the indices for blocks 2 and 3
-    biasIndices = 2:3;
-    % Randomly permute these indices
-    randIndices = randperm(length(biasIndices));
-    % Apply the permutation to the AudLeftBias array
-    TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
-end
 
 TDTemp.RewardMagnitudeL(iTrial) = TaskParameters.GUI.RewardAmount;
 TDTemp.RewardMagnitudeR(iTrial) = TaskParameters.GUI.RewardAmount;
