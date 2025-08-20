@@ -26,7 +26,7 @@ if iTrial == 1
         biasIndices = 2:3;
         % Randomly permute these indices
         randIndices = randperm(length(biasIndices));
-        %randIndices = [2 1]; % Force inversion for tests
+        randIndices = [2 1]; % Force inversion for tests
         if diff(randIndices) > 0
             BpodSystem.Data.Custom.invertBlocks = false;
         else
@@ -34,7 +34,7 @@ if iTrial == 1
         end
         % Apply the permutation to the AudLeftBias array and color map
         TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices) = TaskParameters.GUI.BlockTable.AudLeftBias(biasIndices(randIndices));
-        BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices, :) = BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices(randIndices), :);
+        %BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices, :) = BpodSystem.Data.Custom.FitIndexToColorMap(biasIndices(randIndices), :);
     end
 
     
