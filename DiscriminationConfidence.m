@@ -56,7 +56,7 @@ iTrial = 1;
 while RunSession
     InitializeCustomDataFields(iTrial); % Initialize data (trial type) vectors and first values
     
-    SoundLevel = 5;
+    SoundLevel = 1;
     ClickLength = 2;
     if BpodSystem.EmulatorMode
         % EMULATOR MODE: Generate click trains dynamically
