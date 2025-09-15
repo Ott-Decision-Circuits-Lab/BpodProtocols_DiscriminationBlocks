@@ -34,6 +34,8 @@ if strcmp(AnalysisType, "single")
         Animal = -1;
     end
     dateString = string(SessionData.Info.SessionDate);
+else
+    Animal = str2double(SessionData.ratIDs(1)); % TO DO: improve this
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -83,7 +85,7 @@ tiledLayoutHandle.Padding = 'tight';
 if strcmp(AnalysisType, "single")
     figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3});
 else
-
+    figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, SessionData.drugNames{1}, SessionData.drugDoses(1), SessionData.drugDosageUnits{1}); % TO DO: improve this
 end
 sgtitle(figtitle, 'FontSize', 14);
 % ExperiencedDV=DV;
@@ -128,27 +130,64 @@ end
 hold off
 
 % bias blocks psychometric
+% bias blocks psychometric
 nexttile(tiledLayoutHandle);
 hold on
-CondColors = {'b', 'k', 'r'};
+
+% Define color mapping for biases
+leftBiasColor = 'r';  % Red for left-biased
+unbiasedColor = 'k';  % Black for unbiased
+rightBiasColor = 'b';  % Blue for right-biased
+
 AudBiasCompleted = SessionData.Custom.TrialData.AudBias(CompletedTrials);
 uniqueAudBiases = unique(AudBiasCompleted);
-BiasToFitIndexMap = containers.Map('KeyType', 'double', 'ValueType', 'double');
-for i = 1:numel(uniqueAudBiases)
-    BiasToFitIndexMap(uniqueAudBiases(i)) = i;
-end
-for blockBias = uniqueAudBiases
-    CurrentDVs = AudDV(AudBiasCompleted == blockBias);
-    CurrentChoiceLeft = ChoiceLeftCompleted(AudBiasCompleted == blockBias);
+
+% Categorize biases into three groups
+leftBias = uniqueAudBiases(uniqueAudBiases > 0.5);
+unbiased = uniqueAudBiases(uniqueAudBiases == 0.5);
+rightBias = uniqueAudBiases(uniqueAudBiases < 0.5);
+
+% Plot psychometric curves
+% Left-biased
+if ~isempty(leftBias)
+    CurrentDVs = AudDV(ismember(AudBiasCompleted, leftBias));
+    CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, leftBias));
     BinIdx = discretize(CurrentDVs, commonBinEdges);
     PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
     PsycX = grpstats(CurrentDVs,BinIdx,'mean');
-    plot(PsycX,PsycY, 'o','MarkerFaceColor',CondColors{BiasToFitIndexMap(blockBias)},'MarkerEdgeColor','w','MarkerSize',6)
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',leftBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
     XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
     YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-    plot(XFit,YFit, '-', 'Color',CondColors{BiasToFitIndexMap(blockBias)});
-    xlabel('DV');ylabel('p left')
+    plot(XFit,YFit, '-', 'Color',leftBiasColor);
 end
+
+% Unbiased
+if ~isempty(unbiased)
+    CurrentDVs = AudDV(AudBiasCompleted == unbiased);
+    CurrentChoiceLeft = ChoiceLeftCompleted(AudBiasCompleted == unbiased);
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',unbiasedColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',unbiasedColor);
+end
+
+% Right-biased
+if ~isempty(rightBias)
+    CurrentDVs = AudDV(ismember(AudBiasCompleted, rightBias));
+    CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, rightBias));
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',rightBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',rightBiasColor);
+end
+
+xlabel('DV'); ylabel('p left')
 hold off
 
 %DV distribution

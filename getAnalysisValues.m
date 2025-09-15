@@ -22,6 +22,7 @@ FixDur = [];
 allRawEvents = [];
 allTrialStartTimesSec_Concatenated = [];
 sessionStartIdxs = 1;
+AudBias = [];
 
 % For pre-allocation
 % DecisionVariable = nan(1, nTrials);
@@ -140,6 +141,7 @@ for n = 1:size(joinedData, 1)
     ChoiceCorrect = [ChoiceCorrect, joinedData(n).Custom.TrialData.ChoiceCorrect(firstTrialIdx:lastTrialIdx)];
     BlockNumber = [BlockNumber, joinedData(n).Custom.TrialData.BlockNumber(firstTrialIdx:lastTrialIdx)];
     FixDur = [FixDur, joinedData(n).Custom.TrialData.FixDur(firstTrialIdx:lastTrialIdx)];
+    AudBias = [AudBias, joinedData(n).Custom.TrialData.AudBias(firstTrialIdx:lastTrialIdx)];
 
     % Raw events
     allRawEvents = [allRawEvents, joinedData(n).RawEvents.Trial(firstTrialIdx:lastTrialIdx)]; % An array
@@ -161,6 +163,7 @@ TDTemp.Feedback = Feedback;
 TDTemp.ChoiceCorrect = ChoiceCorrect;
 TDTemp.BlockNumber = BlockNumber;
 TDTemp.FixDur = FixDur;
+TDTemp.AudBias = AudBias;
 TDTemp.allTrialStartTimesSec_Concatenated = allTrialStartTimesSec_Concatenated;
 
 valueNames = {'date', 'nTrials' 'nTrialsArray', 'ratIDs', 'allRawEventsMatrix', 'allTrialsStartTimesSec', ...,
