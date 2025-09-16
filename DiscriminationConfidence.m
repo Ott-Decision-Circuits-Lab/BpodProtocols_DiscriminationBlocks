@@ -63,8 +63,8 @@ while RunSession
         % Fetch current block's auditory bias from TrialData
         BlockTableMask = BpodSystem.Data.Custom.TrialData.BlockTableMask;
         BlockBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);  % Get auditory bias from block struct defined by InitializeCustomDataFields.m
-        
-        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta', BlockBias);
+        TotalClicks = 100;
+        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, 25000, ClickLength, SoundLevel, 'beta', BlockBias, TotalClicks);
     else
         LoadTrialDependentWaveform(Player, iTrial, SoundLevel, ClickLength); % Load white noise, stimuli trains, and error sound to wave player if not EmulatorMode
         InitiateOlfactometer(iTrial);

@@ -29,7 +29,8 @@ if ~BpodSystem.EmulatorMode
         CurrentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(BlockTableMask);
 
         % Generate click trains with block bias
-        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, fs, ClickLength, SoundLevel, 'biasedUniform', CurrentAudBias);
+        TotalClicks = 100;
+        [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, TaskParameters.GUI.AuditoryStimulusTime, fs, ClickLength, SoundLevel, 'biasedUniform', CurrentAudBias, TotalClicks);
 
         % Load waveforms
         Player.loadWaveform(3, LeftClickTrain);   % Left channel
