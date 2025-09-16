@@ -82,7 +82,7 @@ CondColors={[0,0,0],[.9,.1,.1]};
 FigHandle = tiledlayout('flow');
 FigHandle.TileSpacing = 'tight';
 FigHandle.Padding = 'tight';
-if isfield(SessionData.Custom, Pharmacology)
+if isfield(SessionData.Custom, "Pharmacology")
     if strcmp(AnalysisType, "single")
         figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3});
     else
