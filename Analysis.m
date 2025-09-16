@@ -223,6 +223,8 @@ xlim([0 nTrials])
 xlabel("iTrial"); ylabel("Aud DV");
 hold off
 
+FigHandle = gcf;
+
 end
 
 function RedoTicks(h)
