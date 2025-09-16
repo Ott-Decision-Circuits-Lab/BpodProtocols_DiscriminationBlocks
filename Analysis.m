@@ -79,9 +79,9 @@ end
 CondColors={[0,0,0],[.9,.1,.1]};
 
 %%
-tiledLayoutHandle = tiledlayout('flow');
-tiledLayoutHandle.TileSpacing = 'tight';
-tiledLayoutHandle.Padding = 'tight';
+FigHandle = tiledlayout('flow');
+FigHandle.TileSpacing = 'tight';
+FigHandle.Padding = 'tight';
 if strcmp(AnalysisType, "single")
     figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3});
 else
@@ -96,7 +96,7 @@ commonBinEdges = linspace(min(AudDV)-10*eps, max(AudDV)+10*eps, AudBin+1);
 binCenters = (commonBinEdges(1:end-1) + commonBinEdges(2:end))/2;
 
 %Psychometric
-nexttile(tiledLayoutHandle);
+nexttile(FigHandle);
 hold on
 
 BinIdx = discretize(AudDV, commonBinEdges);
@@ -110,7 +110,7 @@ xlabel('DV');ylabel('p left')
 text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(nTrialsCompleted)]);
 
 % bias blocks psychometric, last block gray
-nexttile(tiledLayoutHandle);
+nexttile(FigHandle);
 hold on
 CondColors = {'k', 'b', 'r', [0.5 0.5 0.5]};
 ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
@@ -131,7 +131,7 @@ hold off
 
 % bias blocks psychometric
 % bias blocks psychometric
-nexttile(tiledLayoutHandle);
+nexttile(FigHandle);
 hold on
 
 % Define color mapping for biases
@@ -191,7 +191,7 @@ xlabel('DV'); ylabel('p left')
 hold off
 
 %DV distribution
-nexttile(tiledLayoutHandle);
+nexttile(FigHandle);
 hold on
 StartPosition = 1;
 EndPosition = 0;
