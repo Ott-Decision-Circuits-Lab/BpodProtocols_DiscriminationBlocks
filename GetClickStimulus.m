@@ -43,7 +43,7 @@ function [LeftClickTrain, RightClickTrain] = GetClickStimulus(iTrial, Duration, 
             end
 
             % Calculate click rates based on DV
-            LeftClickRate = round(50 * (DV + 1));
+            LeftClickRate = round((TotalClicks/2) * (DV + 1));
             RightClickRate = TotalClicks - LeftClickRate;
 
             LeftClickTrain = GeneratePoissonClickTrain(LeftClickRate, Duration, SamplingRate, ClickLength);

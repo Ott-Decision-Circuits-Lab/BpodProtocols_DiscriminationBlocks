@@ -24,12 +24,8 @@ ClickTime(N) = 1; %round(-log(rand)*SamplingRate/ClickRate);
 while ClickTime(N) < SamplingRate*Duration
     N = N+1;
     next_t_in = 0;
-    while next_t_in <= ClickLength
+    while next_t_in <= ClickLength % check if time-interval for next click is smaller than click length
         next_t_in = round(-log(rand)*SamplingRate/ClickRate);
-        % If negative due to numerical issues, force regeneration
-        if next_t_in < 0
-            next_t_in = 0;  % Keeps us in the loop to regenerate
-        end
     end
     ClickTime(N) = ClickTime(N-1) + next_t_in;
 end
