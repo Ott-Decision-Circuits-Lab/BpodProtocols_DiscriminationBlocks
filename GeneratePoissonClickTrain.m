@@ -25,12 +25,11 @@ while ClickTime(N) < SamplingRate*Duration
     N = N+1;
     next_t_in = 0;
     while next_t_in <= ClickLength
-        r = rand;
-        % Ensure r is strictly in (0,1) to avoid log issues
-        while r >= 1 || r <= 0
-            r = rand;
+        next_t_in = round(-log(rand)*SamplingRate/ClickRate);
+        % If negative due to numerical issues, force regeneration
+        if next_t_in < 0
+            next_t_in = 0;  % Keeps us in the loop to regenerate
         end
-        next_t_in = round(-log(r)*SamplingRate/ClickRate);
     end
     ClickTime(N) = ClickTime(N-1) + next_t_in;
 end
