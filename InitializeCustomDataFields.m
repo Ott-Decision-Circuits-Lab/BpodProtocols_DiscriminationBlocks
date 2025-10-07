@@ -8,17 +8,6 @@ global TaskParameters
 
 if iTrial == 1
     BpodSystem.Data.Custom.TrialData = [];
-    % Create a mapping from bias values to fitIndex
-    uniqueBiases = unique(TaskParameters.GUI.BlockTable.AudLeftBias, 'stable');
-    BpodSystem.Data.Custom.BiasToFitIndexMap = containers.Map('KeyType', 'double', 'ValueType', 'double');
-    for i = 1:numel(uniqueBiases)
-        BpodSystem.Data.Custom.BiasToFitIndexMap(uniqueBiases(i)) = i;
-    end
-
-    black = [0, 0, 0]; % 0.5 left bias
-    red = [1, 0, 0]; % e.g. 0.7 left bias
-    blue = [0, 0, 1]; % e.g. 0.3 left bias
-    BpodSystem.Data.Custom.FitIndexToColorMap = vertcat(black, red, blue);
 
     % -----------------------Auditory Bias Randomization---------------------- %
     if TaskParameters.GUI.RandomizeBiasBlocks
@@ -26,6 +15,7 @@ if iTrial == 1
         biasIndices = 2:3;
         % Randomly permute these indices
         randIndices = randperm(length(biasIndices));
+        %randIndices = [1 2]; % Force no inversion for tests
         %randIndices = [2 1]; % Force inversion for tests
         if diff(randIndices) > 0
             BpodSystem.Data.Custom.invertBlocks = false;

@@ -67,22 +67,28 @@ switch Action
 
         %% Psyc Auditory
         %hold(AxesHandles.HandlePsycAud,'on')
+
+        % Create a mapping from bias values to fitIndex
+        uniqueBiases = unique(TaskParameters.GUI.BlockTable.AudLeftBias, 'stable');
+        BpodSystem.Data.Custom.BiasToFitIndexMap = containers.Map('KeyType', 'double', 'ValueType', 'double');
+        for i = 1:numel(uniqueBiases)
+            BpodSystem.Data.Custom.BiasToFitIndexMap(uniqueBiases(i)) = i;
+        end
+    
+        black = [0, 0, 0]; % 0.5 left bias
+        blue = [0, 0, 1]; % e.g. 0.3 left bias
+        red = [1, 0, 0]; % e.g. 0.7 left bias
+        BpodSystem.Data.Custom.FitIndexToColorMap = vertcat(black, blue, red);
+
         BpodSystem.GUIHandles.OutcomePlot.PsycAud = cell(1, 3);
         BpodSystem.GUIHandles.OutcomePlot.PsycAudFit = cell(1, 3); % Pre-allocate for 3 known blocks
         for iBlock = 1:3
             currentAudBias = TaskParameters.GUI.BlockTable.AudLeftBias(iBlock);
-            if abs(currentAudBias - 0.5) < 1e-6
-                lineColor = [0, 0, 0]; % Black for unbiased
-            elseif currentAudBias > 0.5
-                lineColor = [1, 0, 0]; % Red for left bias (> 0.5)
-            elseif currentAudBias < 0.5
-                lineColor = [0, 0, 1]; % Blue for right bias (< 0.5)
-            else
-                lineColor = [0.8314, 0.5098, 0.4157]; % Fallback
-            end
-        
+            fitIndex = BpodSystem.Data.Custom.BiasToFitIndexMap(currentAudBias);
+            lineColor = BpodSystem.Data.Custom.FitIndexToColorMap(fitIndex, :);
+
             % Initialize fit lines with dynamic colors
-            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{iBlock} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', lineColor, 'MarkerSize', MarkerSize - 2, 'Visible','off');
+            BpodSystem.GUIHandles.OutcomePlot.PsycAudFit{fitIndex} = line(AxesHandles.HandlePsycAud, [-1 1], [.5 .5], 'color', lineColor, 'MarkerSize', MarkerSize - 2, 'Visible','off');
         end
         
         AxesHandles.HandlePsycAud.YLim = [-.05 1.05];
@@ -328,7 +334,7 @@ switch Action
                 BlockNumber = ones(size(LeftChoices));
             end
 
-            if iTrial == 5 | iTrial == 10
+            if iTrial == 6 | iTrial == 10
                 stophere = "stop";
             end
         
