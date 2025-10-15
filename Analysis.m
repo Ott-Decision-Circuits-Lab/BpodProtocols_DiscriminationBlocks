@@ -117,35 +117,11 @@ plot(XFit,YFit,'Color','k');
 xlabel('DV');ylabel('p left')
 text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(nTrialsCompleted)]);
 
-% bias blocks psychometric, last block gray
-nexttile(FigHandle);
-hold on
-CondColors = {'k', 'b', 'r', [0.5 0.5 0.5]};
-ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
-BlockNumberCompleted = SessionData.Custom.TrialData.BlockNumber(CompletedTrials);
-for iBlock = unique(BlockNumberCompleted)
-    CurrentDVs = AudDV(BlockNumberCompleted == iBlock);
-    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == iBlock);
-    BinIdx = discretize(CurrentDVs, commonBinEdges);
-    PsycY = grpstats(CurrentChoiceLeft,BinIdx, 'mean');
-    PsycX = grpstats(CurrentDVs, BinIdx, 'mean');
-    plot(PsycX, PsycY, 'o', 'MarkerFaceColor', CondColors{iBlock}, 'MarkerEdgeColor', 'w', 'MarkerSize', 6)
-    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
-    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-    plot(XFit,YFit, '-', 'Color',CondColors{iBlock});
-    xlabel('DV');ylabel('p left')
-end
-hold off
-
-% bias blocks psychometric
-% bias blocks psychometric
-nexttile(FigHandle);
-hold on
-
 % Define color mapping for biases
 leftBiasColor = 'r';  % Red for left-biased
 unbiasedColor = 'k';  % Black for unbiased
 rightBiasColor = 'b';  % Blue for right-biased
+lastBlockColor = [0.5, 0.5, 0.5]; % Gray for the last unbiased block
 
 AudBiasCompleted = SessionData.Custom.TrialData.AudBias(CompletedTrials);
 uniqueAudBiases = unique(AudBiasCompleted);
@@ -154,6 +130,70 @@ uniqueAudBiases = unique(AudBiasCompleted);
 leftBias = uniqueAudBiases(uniqueAudBiases > 0.5);
 unbiased = uniqueAudBiases(uniqueAudBiases == 0.5);
 rightBias = uniqueAudBiases(uniqueAudBiases < 0.5);
+
+% bias blocks psychometric, last block gray
+nexttile(FigHandle);
+hold on
+ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
+BlockNumberCompleted = SessionData.Custom.TrialData.BlockNumber(CompletedTrials);
+
+% Unbiased at the beginning of the task (black)
+if ~isempty(unbiased)
+    CurrentDVs = AudDV(BlockNumberCompleted == 1);
+    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == 1);
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',unbiasedColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',unbiasedColor);
+end
+
+% Left-biased
+if ~isempty(leftBias)
+    CurrentDVs = AudDV(ismember(AudBiasCompleted, leftBias));
+    CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, leftBias));
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',leftBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',leftBiasColor);
+end
+
+% Right-biased
+if ~isempty(rightBias)
+    CurrentDVs = AudDV(ismember(AudBiasCompleted, rightBias));
+    CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, rightBias));
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',rightBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',rightBiasColor);
+end
+
+% Unbiased at the endof the task (gray)
+if ~isempty(unbiased)
+    CurrentDVs = AudDV(BlockNumberCompleted == 4);
+    CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == 4);
+    BinIdx = discretize(CurrentDVs, commonBinEdges);
+    PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
+    PsycX = grpstats(CurrentDVs,BinIdx,'mean');
+    plot(PsycX,PsycY, 'o','MarkerFaceColor',lastBlockColor,'MarkerEdgeColor','w','MarkerSize',6)
+    XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
+    YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
+    plot(XFit,YFit, '-', 'Color',unbiasedColor);
+end
+
+hold off
+
+% bias blocks psychometric
+nexttile(FigHandle);
+hold on
 
 % Plot psychometric curves
 % Left-biased
@@ -204,9 +244,13 @@ hold on
 StartPosition = 1;
 EndPosition = 0;
 for iBlock = unique(BlockNumber)
+    blockIdx = (BlockNumber == iBlock);
+    currentBias = unique(SessionData.Custom.TrialData.AudBias(blockIdx));
+    fitIndex = SessionData.Custom.BiasToFitIndexMap(currentBias);
+    color = SessionData.Custom.FitIndexToColorMap(fitIndex, :);
     CurrentDVs = DV(BlockNumber == iBlock);
     EndPosition = EndPosition + numel(CurrentDVs);
-    plot(StartPosition:EndPosition, CurrentDVs, 'o', 'Color', CondColors{iBlock}, 'MarkerSize', 2)
+    plot(StartPosition:EndPosition, CurrentDVs, 'o', 'Color', color, 'MarkerSize', 2)
     StartPosition = StartPosition + numel(CurrentDVs);
 end
 BlockLengths = SessionData.SettingsFile.GUI.BlockTable.BlockLen;
