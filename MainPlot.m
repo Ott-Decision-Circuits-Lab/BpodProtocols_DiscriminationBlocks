@@ -69,10 +69,24 @@ switch Action
         %hold(AxesHandles.HandlePsycAud,'on')
 
         % Create a mapping from bias values to fitIndex
-        uniqueBiases = unique(TaskParameters.GUI.BlockTable.AudLeftBias, 'stable');
+        % Create a mapping from bias values to fitIndex based on ACTUAL VALUE, not order
+        tol = 1e-6;  % Tolerance for floating point comparison
         BpodSystem.Data.Custom.BiasToFitIndexMap = containers.Map('KeyType', 'double', 'ValueType', 'double');
-        for i = 1:numel(uniqueBiases)
-            BpodSystem.Data.Custom.BiasToFitIndexMap(uniqueBiases(i)) = i;
+        
+        % Always map 0.5 to index 1 (black)
+        BpodSystem.Data.Custom.BiasToFitIndexMap(0.5) = 1;
+        
+        % For other bias values, map based on value
+        allBiases = TaskParameters.GUI.BlockTable.AudLeftBias;
+        for i = 1:numel(allBiases)
+            bias = allBiases(i);
+            if abs(bias - 0.5) > tol  % Not exactly 0.5
+                if bias < 0.5
+                    BpodSystem.Data.Custom.BiasToFitIndexMap(bias) = 2;  % Always blue for < 0.5
+                else
+                    BpodSystem.Data.Custom.BiasToFitIndexMap(bias) = 3;  % Always red for > 0.5
+                end
+            end
         end
     
         black = [0, 0, 0]; % 0.5 left bias
