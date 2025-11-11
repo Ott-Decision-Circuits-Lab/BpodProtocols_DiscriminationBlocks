@@ -79,18 +79,23 @@ end
 CondColors={[0,0,0],[.9,.1,.1]};
 
 %%
+TotalClicks = SessionData.SettingsFile.GUI.SumRates;
+AudStimTime = num2str(SessionData.SettingsFile.GUI.AuditoryStimulusTime);
+AudLeftBiasString = num2str(SessionData.SettingsFile.GUI.BlockTable.AudLeftBias(1:3, :)');
+AudLeftBiasString = strrep(AudLeftBiasString, "         ", "/");
 FigHandle = tiledlayout('flow');
 FigHandle.TileSpacing = 'tight';
 FigHandle.Padding = 'tight';
 if isfield(SessionData.Custom, "Pharmacology")
     if strcmp(AnalysisType, "single")
-        figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3});
+        figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, ...
+            SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3}, TotalClicks, AudStimTime, AudLeftBiasString);
     else
         figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, SessionData.drugNames{1}, SessionData.drugDoses(1), SessionData.drugDosageUnits{1}); % TO DO: improve this
     end
 else
     if strcmp(AnalysisType, "single")
-        figtitle = sprintf("DiscriminationBlocks, R%d on %s", Animal, dateString);
+        figtitle = sprintf("DiscriminationBlocks, R%d on %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", Animal, dateString, TotalClicks, AudStimTime, AudLeftBiasString);
     else
         figtitle = sprintf("DiscriminationBlocks, R%d", Animal); % TO DO: improve this
     end
