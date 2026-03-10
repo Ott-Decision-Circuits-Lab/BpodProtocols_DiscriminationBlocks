@@ -1,8 +1,10 @@
 function FigHandle = Analysis(SessionData)
 
-if isfield(SessionData, 'TrialWiseData')
-    AnalysisType = "pooled";
-else
+FigHandle = tiledlayout('flow');
+FigHandle.TileSpacing = 'tight';
+FigHandle.Padding = 'tight';
+
+if ~isfield(SessionData, 'TrialWiseData')
     AnalysisType = "single";
     if nargin < 1
         global TaskParameters
@@ -23,56 +25,38 @@ else
             GUISettings = SessionData.SettingsFile.GUI;
         end
     end
-end
 
-AudBin = 7; %Bins for psychometric
-
-if strcmp(AnalysisType, "single")
-    Animal = str2double(SessionData.Info.Subject);
-    if isnan(Animal)
-        Animal = -1;
-    end
-    dateString = string(SessionData.Info.SessionDate);
-
+    % Load single session variables
     nTrials=SessionData.nTrials;
     DV = SessionData.Custom.TrialData.DecisionVariable(1:nTrials-1);
     ChoiceLeft = SessionData.Custom.TrialData.ChoiceLeft(1:nTrials-1);
-    ST = SessionData.Custom.TrialData.SampleLength(1:nTrials-1);
-    CatchTrial = SessionData.Custom.TrialData.CatchTrial((1:nTrials-1));
     Feedback = SessionData.Custom.TrialData.Feedback(1:nTrials-1);
     Correct = SessionData.Custom.TrialData.ChoiceCorrect(1:nTrials-1);
     BlockNumber = SessionData.Custom.TrialData.BlockNumber(1:nTrials-1);
-    
-    CompletedTrials = (Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft);
+    CompletedTrials = (Feedback&Correct==1) | (Correct==0);
     nTrialsCompleted = sum(CompletedTrials);
-    
     TotalClicks = SessionData.SettingsFile.GUI.SumRates;
     AudStimTime = num2str(SessionData.SettingsFile.GUI.AuditoryStimulusTime);
+
+    % Make single session strings
+    RatID = str2double(SessionData.Info.Subject);
+    if isnan(RatID)
+        RatID = -1;
+    end
+    dateString = string(SessionData.Info.SessionDate);
     AudLeftBiasString = num2str(SessionData.SettingsFile.GUI.BlockTable.AudLeftBias(1:3, :)');
     AudLeftBiasString = strrep(AudLeftBiasString, "         ", "/");
-    FigHandle = tiledlayout('flow');
-    FigHandle.TileSpacing = 'tight';
-    FigHandle.Padding = 'tight';
     if isfield(SessionData.Custom, "Pharmacology")
-        if strcmp(AnalysisType, "single")
-            figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", Animal, dateString, SessionData.Custom.Pharmacology{1}, ...
-                SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3}, TotalClicks, AudStimTime, AudLeftBiasString);
-        else
-            figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s", Animal, SessionData.drugNames{1}, SessionData.drugDoses(1), SessionData.drugDosageUnits{1}); % TO DO: improve this
-        end
-    else
-        if strcmp(AnalysisType, "single")
-            figtitle = sprintf("DiscriminationBlocks, R%d on %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", Animal, dateString, TotalClicks, AudStimTime, AudLeftBiasString);
-        else
-            figtitle = sprintf("DiscriminationBlocks, R%d", Animal); % TO DO: improve this
-        end
-    end
-    sgtitle(figtitle, 'FontSize', 14);
-    % ExperiencedDV=DV; 
+        figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", RatID, dateString, SessionData.Custom.Pharmacology{1}, ...
+                    SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3}, TotalClicks, AudStimTime, AudLeftBiasString);
 
-else % pooled session analysis
-    Animal = unique(SessionData.SessionWiseData.Subject);
-    dateString = strcat(string(SessionData.SessionWiseData.SessionDate{1}), " - ", string(SessionData.SessionWiseData.SessionDate{end}));
+    else
+        figtitle = sprintf("DiscriminationBlocks, R%d on %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", RatID, dateString, TotalClicks, AudStimTime, AudLeftBiasString);
+    end
+else
+    AnalysisType = "pooled";
+    
+    % Load pooled session variables
     nTrials = sum(SessionData.TrialWiseData.nTrialsArray);
     %nTrials = nTrials - SessionData.SessionWiseData.nSessions; % last trials get aborted
     DV = SessionData.TrialWiseData.DecisionVariable;
@@ -83,20 +67,29 @@ else % pooled session analysis
     AudBias = SessionData.TrialWiseData.AudBias;
     CompletedTrials = (Feedback&Correct==1) | (Correct==0);
     nTrialsCompleted = sum(CompletedTrials);
+
+    % Pooled session strings
+    RatID = unique(SessionData.SessionWiseData.Subject);
+    dateString = strcat(string(SessionData.SessionWiseData.SessionDate{1}), " - ", string(SessionData.SessionWiseData.SessionDate{end}));
     TotalClicksString = num2str(unique(SessionData.SessionWiseData.SumRates));
     AudStimTimeString = num2str(unique(SessionData.SessionWiseData.AuditoryStimulusTime));
     AudLeftBiasString = num2str(unique(SessionData.SessionWiseData.AudLeftBias));
+    
+    figtitle = sprintf("DiscriminationBlocks: R%d on %s with %s %s %s", str2double(RatID{1}), dateString, SessionData.SessionWiseData.Pharmacology{1, 1}{1}, SessionData.SessionWiseData.Pharmacology{1, 1}{2}, SessionData.SessionWiseData.Pharmacology{1, 1}{3}); % TO DO: improve this
 end
+sgtitle(figtitle, 'FontSize', 14);
+
+%% Psychometric Plot
+
+nexttile(FigHandle);
+hold on
+
+AudBin = 7; %Bins for psychometric
 
 % Determine common bin edges across ALL data
 DV_Completed = DV(CompletedTrials);
 commonBinEdges = linspace(min(DV_Completed)-10*eps, max(DV_Completed)+10*eps, AudBin+1);
 binCenters = (commonBinEdges(1:end-1) + commonBinEdges(2:end))/2;
-
-%% Psychometric Plot
-FigHandle = tiledlayout("flow");
-nexttile(FigHandle);
-hold on
 
 % Define Color Scheme
 unbiasedColor = [0, 0, 0];       % Black
