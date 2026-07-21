@@ -1,335 +1,416 @@
 function FigHandle = Analysis(SessionData)
+% Analysis.m
+% Handles three cases:
+%   1) Automatic on rig: Analysis() - uses global BpodSystem
+%   2) Manual single: Analysis('filepath.mat') - loads one session
+%   3) Manual pooled: Analysis(SessionData) or Analysis('pooledfile.mat')
 
-FigHandle = tiledlayout('flow');
-FigHandle.TileSpacing = 'tight';
-FigHandle.Padding = 'tight';
-
-if ~isfield(SessionData, 'TrialWiseData')
-    AnalysisType = "single";
+    %% ---- Step 1: Get SessionData into workspace ----
+    
     if nargin < 1
-        global TaskParameters
+        % Case 1: Automatic on rig
         global BpodSystem
+        global TaskParameters
         if isempty(BpodSystem)
             [datafile, datapath] = uigetfile();
-            load(fullfile(datapath, datafile));
-            GUISettings = SessionData.SettingsFile.GUI;
+            loaded = load(fullfile(datapath, datafile));
+            SessionData = loaded.SessionData;
         else
             SessionData = BpodSystem.Data;
-            GUISettings = TaskParameters.GUI;
+            SessionData.SettingsFile.GUI = TaskParameters.GUI;
         end
-    else
-        try
-            SessionData = DataFile;
-        catch
-            load(DataFile);
-            GUISettings = SessionData.SettingsFile.GUI;
-        end
+    elseif ischar(SessionData) || isstring(SessionData)
+        % Case 2 or 3: File path provided
+        loaded = load(SessionData);
+        SessionData = loaded.SessionData;
     end
-
-    % Load single session variables
-    nTrials=SessionData.nTrials;
-    DV = SessionData.Custom.TrialData.DecisionVariable(1:nTrials-1);
-    ChoiceLeft = SessionData.Custom.TrialData.ChoiceLeft(1:nTrials-1);
-    Feedback = SessionData.Custom.TrialData.Feedback(1:nTrials-1);
-    Correct = SessionData.Custom.TrialData.ChoiceCorrect(1:nTrials-1);
-    BlockNumber = SessionData.Custom.TrialData.BlockNumber(1:nTrials-1);
-    CompletedTrials = (Feedback&Correct==1) | (Correct==0);
-    nTrialsCompleted = sum(CompletedTrials);
-    TotalClicks = SessionData.SettingsFile.GUI.SumRates;
-    AudStimTime = num2str(SessionData.SettingsFile.GUI.AuditoryStimulusTime);
-
-    % Make single session strings
-    RatID = str2double(SessionData.Info.Subject);
-    if isnan(RatID)
-        RatID = -1;
-    end
-    dateString = string(SessionData.Info.SessionDate);
-    AudLeftBiasString = num2str(SessionData.SettingsFile.GUI.BlockTable.AudLeftBias(1:3, :)');
-    AudLeftBiasString = strrep(AudLeftBiasString, "         ", "/");
-    if isfield(SessionData.Custom, "Pharmacology")
-        figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", RatID, dateString, SessionData.Custom.Pharmacology{1}, ...
-                    SessionData.Custom.Pharmacology{2}, SessionData.Custom.Pharmacology{3}, TotalClicks, AudStimTime, AudLeftBiasString);
-
-    else
-        figtitle = sprintf("DiscriminationBlocks, R%d on %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", RatID, dateString, TotalClicks, AudStimTime, AudLeftBiasString);
-    end
-else
-    AnalysisType = "pooled";
+    % else: SessionData is already a struct (Case 3)
     
-    % Load pooled session variables
+    %% ---- Step 2: Normalize to unified format ----
+    
+    if ~isfield(SessionData, 'TrialWiseData')
+        SessionData = NormalizeSingleSession(SessionData);
+    end
+    
+    %% ---- Step 3: Extract unified variables ----
+    
+    nSessions = SessionData.SessionWiseData.nSessions;
     nTrials = sum(SessionData.TrialWiseData.nTrialsArray);
-    %nTrials = nTrials - SessionData.SessionWiseData.nSessions; % last trials get aborted
+    
     DV = SessionData.TrialWiseData.DecisionVariable;
     ChoiceLeft = SessionData.TrialWiseData.ChoiceLeft;
     Feedback = SessionData.TrialWiseData.Feedback;
     Correct = SessionData.TrialWiseData.ChoiceCorrect;
     BlockNumber = SessionData.TrialWiseData.BlockNumber;
     AudBias = SessionData.TrialWiseData.AudBias;
-    CompletedTrials = (Feedback&Correct==1) | (Correct==0);
+    CompletedTrials = (Feedback & Correct == 1) | (Correct == 0);
     nTrialsCompleted = sum(CompletedTrials);
-
-    % Pooled session strings
-    RatID = unique(SessionData.SessionWiseData.Subject);
-    dateString = strcat(string(SessionData.SessionWiseData.SessionDate{1}), " - ", string(SessionData.SessionWiseData.SessionDate{end}));
-    TotalClicksString = num2str(unique(SessionData.SessionWiseData.SumRates));
-    AudStimTimeString = num2str(unique(SessionData.SessionWiseData.AuditoryStimulusTime));
-    AudLeftBiasString = num2str(unique(SessionData.SessionWiseData.AudLeftBias));
     
-    figtitle = sprintf("DiscriminationBlocks: R%d on %s with %s %s %s", str2double(RatID{1}), dateString, SessionData.SessionWiseData.Pharmacology{1, 1}{1}, SessionData.SessionWiseData.Pharmacology{1, 1}{2}, SessionData.SessionWiseData.Pharmacology{1, 1}{3}); % TO DO: improve this
-end
-sgtitle(figtitle, 'FontSize', 14);
-
-%% Psychometric Plot
-
-nexttile(FigHandle);
-hold on
-
-AudBin = 7; %Bins for psychometric
-
-% Determine common bin edges across ALL data
-DV_Completed = DV(CompletedTrials);
-commonBinEdges = linspace(min(DV_Completed)-10*eps, max(DV_Completed)+10*eps, AudBin+1);
-binCenters = (commonBinEdges(1:end-1) + commonBinEdges(2:end))/2;
-
-% Define Color Scheme
-unbiasedColor = [0, 0, 0];       % Black
-leftBiasColor = [1, 0, 0];       % Red
-rightBiasColor = [0, 0, 1];      % Blue
-lastBlockColor = [0.5, 0.5, 0.5]; % Gray
-
-if strcmp(AnalysisType, "single")
+    %% ---- Step 4: Build title ----
     
-    %% --- ORIGINAL SINGLE SESSION ANALYSIS ---
+    RatIDs = unique(SessionData.SessionWiseData.Subject);
+    RatID = str2double(RatIDs{1});
+    if isnan(RatID), RatID = -1; end
     
-    % Plot all data (black dots)
-    BinIdx = discretize(DV_Completed, commonBinEdges);
-    PsycY = grpstats(ChoiceLeft(CompletedTrials), BinIdx,'mean');
-    PsycX = grpstats(DV(CompletedTrials), BinIdx,'mean');
-    plot(PsycX,PsycY,'ok','MarkerFaceColor','k','MarkerEdgeColor','w','MarkerSize',6)
-    
-    % Fit line (black)
-    XFit = linspace(min(DV_Completed)-10*eps,max(DV_Completed)+10*eps,100);
-    YFit = glmval(glmfit(DV_Completed,ChoiceLeft(CompletedTrials)','binomial'), linspace(min(DV_Completed)-10*eps,max(DV_Completed)+10*eps, 100),'logit');
-    plot(XFit,YFit,'Color','k');
-    
-    % Stats Text
-    xlabel('DV');ylabel('p left')
-    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(nTrialsCompleted)]);
-
-    % Original Categorized Psychometric (Left/Right/Unbiased)
-    AudBiasCompleted = SessionData.Custom.TrialData.AudBias(CompletedTrials);
-    uniqueAudBiases = unique(AudBiasCompleted);
-    leftBias = uniqueAudBiases(uniqueAudBiases > 0.5);
-    unbiased = uniqueAudBiases(uniqueAudBiases == 0.5);
-    rightBias = uniqueAudBiases(uniqueAudBiases < 0.5);
-    
-    ChoiceLeftCompleted = ChoiceLeft(CompletedTrials);
-    BlockNumberCompleted = BlockNumber(CompletedTrials);
-
-    % Unbiased at the beginning (black)
-    if ~isempty(unbiased)
-        CurrentDVs = DV_Completed(BlockNumberCompleted == 1);
-        CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == 1);
-        BinIdx = discretize(CurrentDVs, commonBinEdges);
-        PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
-        PsycX = grpstats(CurrentDVs,BinIdx,'mean');
-        plot(PsycX,PsycY, 'o','MarkerFaceColor',unbiasedColor,'MarkerEdgeColor','w','MarkerSize',6)
-        XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
-        YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-        plot(XFit,YFit, '-', 'Color',unbiasedColor);
+    if nSessions == 1
+        dateString = string(SessionData.SessionWiseData.SessionDate{1});
+        TotalClicks = SessionData.SessionWiseData.SumRates(1);
+        AudStimTime = SessionData.SessionWiseData.AuditoryStimulusTime(1);
+        AudLeftBias = SessionData.SessionWiseData.AudLeftBias(1:3, :)';
+        AudLeftBiasString = strrep(num2str(AudLeftBias), "         ", "/");
+        
+        if isfield(SessionData.SessionWiseData, 'Pharmacology') && ~isempty(SessionData.SessionWiseData.Pharmacology)
+            pharm = SessionData.SessionWiseData.Pharmacology{1};
+            figtitle = sprintf("DiscriminationBlocks, R%d on %s with %s %s %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", ...
+                RatID, dateString, pharm{1}, pharm{2}, pharm{3}, TotalClicks, num2str(AudStimTime), AudLeftBiasString);
+        else
+            figtitle = sprintf("DiscriminationBlocks, R%d on %s, TotalClicks = %d, AudStimTime = %s, AudBias = %s", ...
+                RatID, dateString, TotalClicks, num2str(AudStimTime), AudLeftBiasString);
+        end
+    else
+        dateString = strcat(string(SessionData.SessionWiseData.SessionDate{1}), " - ", ...
+                           string(SessionData.SessionWiseData.SessionDate{end}));
+        figtitle = sprintf("DiscriminationBlocks: R%d on %s (%d sessions, n=%d trials)", ...
+            RatID, dateString, nSessions, nTrialsCompleted);
     end
-
-    % Left-biased (red)
-    if ~isempty(leftBias)
-        CurrentDVs = DV_Completed(ismember(AudBiasCompleted, leftBias));
-        CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, leftBias));
-        BinIdx = discretize(CurrentDVs, commonBinEdges);
-        PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
-        PsycX = grpstats(CurrentDVs,BinIdx,'mean');
-        plot(PsycX,PsycY, 'o','MarkerFaceColor',leftBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
-        XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
-        YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-        plot(XFit,YFit, '-', 'Color',leftBiasColor);
-    end
-
-    % Right-biased (blue)
-    if ~isempty(rightBias)
-        CurrentDVs = DV_Completed(ismember(AudBiasCompleted, rightBias));
-        CurrentChoiceLeft = ChoiceLeftCompleted(ismember(AudBiasCompleted, rightBias));
-        BinIdx = discretize(CurrentDVs, commonBinEdges);
-        PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
-        PsycX = grpstats(CurrentDVs,BinIdx,'mean');
-        plot(PsycX,PsycY, 'o','MarkerFaceColor',rightBiasColor,'MarkerEdgeColor','w','MarkerSize',6)
-        XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
-        YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-        plot(XFit,YFit, '-', 'Color',rightBiasColor);
-    end
-
-    % Unbiased at the end (gray) - Assuming Block 4 is the last unbiased block based on original code
-    if ~isempty(unbiased)
-        CurrentDVs = DV_Completed(BlockNumberCompleted == 4);
-        CurrentChoiceLeft = ChoiceLeftCompleted(BlockNumberCompleted == 4);
-        BinIdx = discretize(CurrentDVs, commonBinEdges);
-        PsycY = grpstats(CurrentChoiceLeft,BinIdx,'mean');
-        PsycX = grpstats(CurrentDVs,BinIdx,'mean');
-        plot(PsycX,PsycY, 'o','MarkerFaceColor',lastBlockColor,'MarkerEdgeColor','w','MarkerSize',6)
-        XFit = linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100);
-        YFit = glmval(glmfit(CurrentDVs,CurrentChoiceLeft','binomial'),linspace(min(CurrentDVs)-10*eps,max(CurrentDVs)+10*eps,100),'logit');
-        plot(XFit,YFit, '-', 'Color',lastBlockColor);
-    end
-
+    
+    %% ---- Step 5: Setup figure ----
+    
+    FigHandle = tiledlayout('flow');
+    FigHandle.TileSpacing = 'tight';
+    FigHandle.Padding = 'tight';
+    sgtitle(figtitle, 'FontSize', 14);
+    
+    %% ---- Step 6: Psychometric Plot ----
+    
     nexttile(FigHandle);
     hold on
-    StartPosition = 1;
-    EndPosition = 0;
-    for iBlock = unique(BlockNumber)
-        blockIdx = (BlockNumber == iBlock);
-        currentBias = unique(SessionData.Custom.TrialData.AudBias(blockIdx));
-        fitIndex = SessionData.Custom.BiasToFitIndexMap(currentBias);
-        color = SessionData.Custom.FitIndexToColorMap(fitIndex, :);
-        CurrentDVs = DV(BlockNumber == iBlock);
-        EndPosition = EndPosition + numel(CurrentDVs);
-        plot(StartPosition:EndPosition, CurrentDVs, 'o', 'Color', color, 'MarkerSize', 2)
-        StartPosition = StartPosition + numel(CurrentDVs);
-    end
-    BlockLengths = SessionData.SettingsFile.GUI.BlockTable.BlockLen;
-    try
-        xticks([0 BlockLengths(1) BlockLengths(1)+BlockLengths(2) BlockLengths(1)+BlockLengths(2)+BlockLengths(3) nTrials])
-    catch
-        try
-            xticks([0 BlockLengths(1) BlockLengths(1)+BlockLengths(2) nTrials])
-        catch
-            xticks([0 BlockLengths(1) nTrials])
-        end
-    end
-    xlim([0 nTrials])
-    xlabel("iTrial"); ylabel("Aud DV");
-    hold off
-
-elseif strcmp(AnalysisType, "pooled")
     
-    %% --- NEW POOLED ANALYSIS ---
+    AudBin = 7;
+    DV_Completed = DV(CompletedTrials);
+    commonBinEdges = linspace(min(DV_Completed)-10*eps, max(DV_Completed)+10*eps, AudBin+1);
     
-    % Extract Session boundaries
-    SessionIndices = cumsum([0, SessionData.TrialWiseData.nTrialsArray(1:end-1)]);
-    nSessions = SessionData.SessionWiseData.nSessions;
-
-    % Initialize vectors to hold aggregated data for each of the 4 types
-    % 1: Start Unbiased (Block 1), 2: Left Bias (>0.5), 3: Right Bias (<0.5), 4: End Unbiased (Block 4)
-    AllDVs{1} = []; Choices{1} = [];
-    AllDVs{2} = []; Choices{2} = [];
-    AllDVs{3} = []; Choices{3} = [];
-    AllDVs{4} = []; Choices{4} = [];
-
-    % Iterate through each session to extract specific blocks
+    % Color scheme
+    unbiasedColor = [0, 0, 0];
+    leftBiasColor = [1, 0, 0];
+    rightBiasColor = [0, 0, 1];
+    lastBlockColor = [0.5, 0.5, 0.5];
+    Colors = [unbiasedColor; leftBiasColor; rightBiasColor; lastBlockColor];
+    
+    % Initialize aggregation arrays: 1=Start Unbiased, 2=Left, 3=Right, 4=End Unbiased
+    AllDVs = cell(1, 4);
+    AllChoices = cell(1, 4);
+    for i = 1:4
+        AllDVs{i} = [];
+        AllChoices{i} = [];
+    end
+    
+    % Session boundaries
+    SessionIndices = cumsum([0, SessionData.TrialWiseData.nTrialsArray]);
+    
+    % Iterate through each session
     for s = 1:nSessions
-        % Get trial indices for this session
+        idxStart = SessionIndices(s) + 1;
         if s < nSessions
-            currentSessionIdx = (SessionIndices(s)+1) : SessionIndices(s+1);
+            idxEnd = SessionIndices(s + 1);
         else
-            currentSessionIdx = (SessionIndices(s)+1) : numel(ChoiceLeft);
+            idxEnd = numel(DV);
         end
+        currentSessionIdx = idxStart:idxEnd;
         
-        % Get values for this session
         SessionBias = AudBias(currentSessionIdx);
         SessionBlockNum = BlockNumber(currentSessionIdx);
         SessionDV = DV(currentSessionIdx);
         SessionChoice = ChoiceLeft(currentSessionIdx);
-
-        SessionCompletedIdx = CompletedTrials(currentSessionIdx);
-        SessionDV_Completed = SessionDV(SessionCompletedIdx);
-        SessionChoiceCompleted = ChoiceLeft(SessionCompletedIdx); % ChoiceLeft already subset by CompletedTrials logic
         
-        % Define colors based on block content within the session
-        % Identify blocks in this session
         sessionBlocks = unique(SessionBlockNum);
         
         for b = sessionBlocks
             blockMask = (SessionBlockNum == b);
             blockBias = unique(SessionBias(blockMask));
             
-            currentColor = [];
-            isUnbiased = (blockBias == 0.5);
-            
-            % Determine Color
-            if isUnbiased
-                % Check if this is the first unbiased block (Block 1) or the last (Block 4)
-                % We assume block numbers are consistent or relative.
-                % Here we check against the standard sequence: 1=Start, 4=End
-                if b == 1
-                    currentColor = unbiasedColor; % Black
-                    blockIdx = 1;
-                elseif b == 4
-                    currentColor = lastBlockColor; % Gray
-                    blockIdx = 4;
-                else
-                    currentColor = unbiasedColor; % Fallback Black
-                end
-            elseif blockBias > 0.5
-                currentColor = leftBiasColor; % Red
-                blockIdx = 2;
-            elseif blockBias < 0.5
-                currentColor = rightBiasColor; % Blue
-                blockIdx = 3;
-            else
-                continue; % Skip if undefined
-            end
-
-            % Aggregate data separated by blocks (for pooled psychometric)
-            if ~isempty(blockIdx)
-                AllDVs{blockIdx} = [AllDVs{blockIdx}, SessionDV(blockMask)];
-                Choices{blockIdx} = [Choices{blockIdx}, SessionChoice(blockMask)];
-            end
-            
-            % Extract data for this specific block
-            BlockDVs = SessionDV(blockMask);
-            BlockChoices = SessionChoice(blockMask);
-            
-            if isempty(BlockDVs) || sum(~isnan(BlockDVs)) < 2
+            if isempty(blockBias) || any(isnan(blockBias))
                 continue;
             end
             
-            % Plot Points
-            BinIdx = discretize(BlockDVs, commonBinEdges);
-            PsycY = grpstats(BlockChoices, BinIdx, 'mean');
-            PsycX = grpstats(BlockDVs, BinIdx, 'mean');
-            plot(PsycX, PsycY, 'o', 'MarkerFaceColor', currentColor, ...
-                 'MarkerEdgeColor', 'w', 'MarkerSize', 6);
+            % Determine bucket index
+            blockIdx = [];
+            if blockBias == 0.5
+                if b == 1
+                    blockIdx = 1;
+                elseif b == 4
+                    blockIdx = 4;
+                else
+                    blockIdx = 1;
+                end
+            elseif blockBias > 0.5
+                blockIdx = 2;
+            elseif blockBias < 0.5
+                blockIdx = 3;
+            end
             
-            % Plot Fit
-            if sum(~isnan(BlockChoices)) > 4
-                XFit = linspace(min(BlockDVs)-10*eps, max(BlockDVs)+10*eps, 100);
-                YFit = glmval(glmfit(BlockDVs, BlockChoices', 'binomial'), XFit, 'logit');
-                plot(XFit, YFit, '-', 'Color', currentColor);
+            if ~isempty(blockIdx)
+                BlockDVs = SessionDV(blockMask);
+                BlockChoices = SessionChoice(blockMask);
+                validMask = ~isnan(BlockDVs) & ~isnan(BlockChoices);
+                AllDVs{blockIdx} = [AllDVs{blockIdx}, BlockDVs(validMask)];
+                AllChoices{blockIdx} = [AllChoices{blockIdx}, BlockChoices(validMask)];
             end
         end
     end
-    xlabel('DV'); ylabel('p left')
-    hold off
-
-    % Plot the 4 aggregated psychometric curves
-    nexttile(FigHandle);
-    hold on
-    Colors = [unbiasedColor; leftBiasColor; rightBiasColor; lastBlockColor];
+    
+    % Plot aggregated psychometric curves
     for i = 1:4
         if ~isempty(AllDVs{i}) && sum(~isnan(AllDVs{i})) > 4
             BinIdx = discretize(AllDVs{i}, commonBinEdges);
-            PsycY = grpstats(Choices{i}, BinIdx, 'mean');
+            PsycY = grpstats(AllChoices{i}, BinIdx, 'mean');
             PsycX = grpstats(AllDVs{i}, BinIdx, 'mean');
             
-            % Plot Points
             plot(PsycX, PsycY, 'o', 'MarkerFaceColor', Colors(i,:), ...
                  'MarkerEdgeColor', 'w', 'MarkerSize', 6);
             
-            % Plot Fit
             XFit = linspace(min(AllDVs{i})-10*eps, max(AllDVs{i})+10*eps, 100);
-            YFit = glmval(glmfit(AllDVs{i}, Choices{i}', 'binomial'), XFit, 'logit');
-            plot(XFit, YFit, '-', 'Color', Colors(i,:));
+            YFit = glmval(glmfit(AllDVs{i}, AllChoices{i}', 'binomial'), XFit, 'logit');
+            plot(XFit, YFit, '-', 'Color', Colors(i,:), 'LineWidth', 1.5);
         end
     end
-    xlabel('DV'); ylabel('p left')
+    
+    xlabel('DV');
+    ylabel('p left');
+    text(0.95*min(get(gca,'XLim')), 0.96*max(get(gca,'YLim')), ...
+         ['n=', num2str(nTrialsCompleted)]);
     hold off
-end
+    
+    %% ---- Step 7: DV Distribution Plot ----
+    
+    nexttile(FigHandle);
+    hold on
+    
+    GlobalStartPosition = 1;
+    
+    for s = 1:nSessions
+        idxStart = SessionIndices(s) + 1;
+        if s < nSessions
+            idxEnd = SessionIndices(s + 1);
+        else
+            idxEnd = numel(DV);
+        end
+        currentSessionIdx = idxStart:idxEnd;
+        
+        SessionBias = AudBias(currentSessionIdx);
+        SessionBlockNum = BlockNumber(currentSessionIdx);
+        SessionDV = DV(currentSessionIdx);
+        
+        sessionBlocks = unique(SessionBlockNum);
+        
+        for b = sessionBlocks
+            blockMask = (SessionBlockNum == b);
+            blockBias = unique(SessionBias(blockMask));
+            
+            if isempty(blockBias) || any(isnan(blockBias))
+                continue;
+            end
+            
+            if blockBias == 0.5
+                if b == 1
+                    color = unbiasedColor;
+                elseif b == 4
+                    color = lastBlockColor;
+                else
+                    color = unbiasedColor;
+                end
+            elseif blockBias > 0.5
+                color = leftBiasColor;
+            elseif blockBias < 0.5
+                color = rightBiasColor;
+            else
+                continue;
+            end
+            
+            CurrentDVs = SessionDV(blockMask);
+            EndPosition = GlobalStartPosition + numel(CurrentDVs) - 1;
+            plot(GlobalStartPosition:EndPosition, CurrentDVs, 'o', ...
+                 'Color', color, 'MarkerSize', 2);
+            GlobalStartPosition = EndPosition + 1;
+        end
+        
+        if s < nSessions
+            xline(GlobalStartPosition - 0.5, ':', 'Color', [0.7 0.7 0.7], 'LineWidth', 0.5);
+        end
+    end
+    
+    xlim([0 GlobalStartPosition - 1]);
+    xlabel('iTrial');
+    ylabel('Aud DV');
+    hold off
+    
+    %% ---- Step 8: DV Distribution Histograms ----
+    
+    blockTypeNames = {'Unbiased (Start)', 'Left Bias', 'Right Bias'};
+    
+    for iBlock = 1:3
+        nexttile(FigHandle);
+        hold on
+        
+        BlockDVs = [];
+        BlockBiases = [];
+        
+        for s = 1:nSessions
+            idxStart = SessionIndices(s) + 1;
+            if s < nSessions
+                idxEnd = SessionIndices(s + 1);
+            else
+                idxEnd = numel(DV);
+            end
+            currentSessionIdx = idxStart:idxEnd;
+            
+            SessionBias = AudBias(currentSessionIdx);
+            SessionBlockNum = BlockNumber(currentSessionIdx);
+            SessionDV = DV(currentSessionIdx);
+            SessionCompleted = CompletedTrials(currentSessionIdx);
+            
+            sessionBlocks = unique(SessionBlockNum);
+            
+            for b = sessionBlocks
+                blockMask = (SessionBlockNum == b);
+                blockBias = unique(SessionBias(blockMask));
+                
+                if isempty(blockBias) || any(isnan(blockBias))
+                    continue;
+                end
+                
+                matchBlock = false;
+                if iBlock == 1 && blockBias == 0.5 && b == 1
+                    matchBlock = true;
+                elseif iBlock == 2 && blockBias > 0.5
+                    matchBlock = true;
+                elseif iBlock == 3 && blockBias < 0.5
+                    matchBlock = true;
+                end
+                
+                if matchBlock
+                    validDVs = SessionDV(blockMask & SessionCompleted);
+                    validDVs = validDVs(~isnan(validDVs));
+                    BlockDVs = [BlockDVs, validDVs];
+                    BlockBiases = [BlockBiases, repmat(blockBias, 1, numel(validDVs))];
+                end
+            end
+        end
+        
+        if isempty(BlockDVs)
+            title(sprintf('%s (no data)', blockTypeNames{iBlock}));
+            continue;
+        end
+        
+        Omega = (BlockDVs + 1) / 2;
+        Omega = min(max(Omega, 1e-6), 1 - 1e-6);
+        
+        p = mean(unique(BlockBiases));
+        blockColor = Colors(iBlock, :);
+        
+        histogram(Omega, 'Normalization', 'pdf', 'BinWidth', 0.05, ...
+                  'FaceColor', [0.7 0.7 0.7], 'EdgeColor', blockColor, 'LineWidth', 1);
+        
+        phat = betafit(Omega);
+        x = linspace(0, 1, 200);
+        yBeta = betapdf(x, phat(1), phat(2));
+        plot(x, yBeta, '-', 'Color', blockColor, 'LineWidth', 1.5);
+        
+        yUniform = zeros(size(x));
+        yUniform(x < 0.5) = 2 * (1 - p);
+        yUniform(x >= 0.5) = 2 * p;
+        plot(x, yUniform, ':', 'Color', blockColor, 'LineWidth', 1);
+        
+        uniformPDF_vals = 2 * (1 - p) * (Omega < 0.5) + 2 * p * (Omega >= 0.5);
+        nllUniform = -sum(log(uniformPDF_vals));
+        nllBeta = -sum(log(betapdf(Omega, phat(1), phat(2))));
+        aicUniform = 2 * 1 + 2 * nllUniform;
+        aicBeta = 2 * 2 + 2 * nllBeta;
+        
+        if aicUniform < aicBeta
+            winner = 'UNIFORM';
+            winColor = [0 0.6 0];
+        else
+            winner = 'BETA';
+            winColor = [0.8 0 0];
+        end
+        
+        text(0.02, 0.95, sprintf('AIC_U=%.0f, AIC_B=%.0f → %s', ...
+             aicUniform, aicBeta, winner), ...
+             'FontSize', 8, 'Color', winColor, 'Units', 'normalized');
+        
+        xlabel('\Omega');
+        ylabel('PDF');
+        title(blockTypeNames{iBlock});
+        xlim([0 1]);
+        ylim([0 4]);
+        hold off
+    end
 
-hold off
-%% End Psychometric Plot
+end % Analysis()
+
+
+%% ---- Helper Function: Normalize single session to pooled format ----
+
+function SessionData = NormalizeSingleSession(SessionData)
+% Converts a single-session struct into the same TrialWiseData/SessionWiseData
+% format used by pooled analysis, enabling unified downstream code.
+
+    nTrials = SessionData.nTrials;
+    
+    % --- TrialWiseData ---
+    TD = SessionData.Custom.TrialData;
+    fields = {'DecisionVariable', 'ChoiceLeft', 'SampleLength', ...
+              'CatchTrial', 'Feedback', 'ChoiceCorrect', ...
+              'BlockNumber', 'LaserTrial', 'AudBias'};
+    
+    TrialWiseData.nTrialsArray = nTrials - 1;  % Last trial typically aborted
+    
+    for k = 1:numel(fields)
+        f = fields{k};
+        if isfield(TD, f)
+            val = TD.(f);
+            if isvector(val) && ~iscell(val)
+                val = val(:)';
+            end
+            TrialWiseData.(f) = val(1:end-1);
+        else
+            if iscell(val)
+                TrialWiseData.(f) = cell(1, nTrials - 1);
+            else
+                TrialWiseData.(f) = nan(1, nTrials - 1);
+            end
+        end
+    end
+    
+    % --- SessionWiseData ---
+    SessionWiseData.nSessions = 1;
+    SessionWiseData.Subject = {SessionData.Info.Subject};
+    SessionWiseData.SessionDate = {SessionData.Info.SessionDate};
+    SessionWiseData.SumRates = SessionData.SettingsFile.GUI.SumRates;
+    SessionWiseData.AuditoryStimulusTime = SessionData.SettingsFile.GUI.AuditoryStimulusTime;
+    
+    if isfield(SessionData.SettingsFile.GUI, 'BlockTable')
+        SessionWiseData.AudLeftBias = SessionData.SettingsFile.GUI.BlockTable.AudLeftBias;
+        if isfield(SessionData.SettingsFile.GUI.BlockTable, 'BlockLen')
+            SessionWiseData.BlockLen = SessionData.SettingsFile.GUI.BlockTable.BlockLen;
+        end
+    end
+    
+    if isfield(SessionData.Custom, 'Pharmacology')
+        SessionWiseData.Pharmacology = {SessionData.Custom.Pharmacology};
+    else
+        SessionWiseData.Pharmacology = {};
+    end
+    
+    if isfield(SessionData.Custom, 'BiasToFitIndexMap')
+        SessionWiseData.BiasToFitIndexMap = SessionData.Custom.BiasToFitIndexMap;
+    end
+    if isfield(SessionData.Custom, 'FitIndexToColorMap')
+        SessionWiseData.FitIndexToColorMap = SessionData.Custom.FitIndexToColorMap;
+    end
+    
+    % --- Merge ---
+    SessionData.TrialWiseData = TrialWiseData;
+    SessionData.SessionWiseData = SessionWiseData;
+end
