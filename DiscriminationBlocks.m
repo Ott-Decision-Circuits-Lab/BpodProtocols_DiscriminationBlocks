@@ -1,4 +1,4 @@
-function DiscriminationConfidence
+function DiscriminationBlocks
 % 2-AFC olfactory and auditory discrimination task implented for Bpod 
 % (https://github.com/Ott-Decision-Circuits-Lab/Bpod_Gen2)
 
@@ -150,4 +150,4 @@ if TaskParameters.GUI.Photometry
     CheckPhotometry(PhotoData, Photo2Data);
 end
 
-end %DiscriminationConfidence()
+end %DiscriminationBlocks()
