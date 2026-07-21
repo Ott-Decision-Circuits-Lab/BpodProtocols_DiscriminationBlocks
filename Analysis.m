@@ -163,12 +163,39 @@ function FigHandle = Analysis(SessionData)
     for i = 1:4
         if ~isempty(AllDVs{i}) && sum(~isnan(AllDVs{i})) > 4
             BinIdx = discretize(AllDVs{i}, commonBinEdges);
-            PsycY = grpstats(AllChoices{i}, BinIdx, 'mean');
-            PsycX = grpstats(AllDVs{i}, BinIdx, 'mean');
             
-            plot(PsycX, PsycY, 'o', 'MarkerFaceColor', Colors(i,:), ...
-                 'MarkerEdgeColor', 'w', 'MarkerSize', 6);
+            % Remove NaNs before grouping
+            validData = ~isnan(AllDVs{i}) & ~isnan(AllChoices{i}) & ~isnan(BinIdx);
+            DV_valid = AllDVs{i}(validData);
+            Ch_valid = AllChoices{i}(validData);
+            Bin_valid = BinIdx(validData);
             
+            % Calculate mean and SEM manually per bin
+            uniqueBins = unique(Bin_valid);
+            nBins = numel(uniqueBins);
+            PsycX = zeros(nBins, 1);
+            PsycY = zeros(nBins, 1);
+            PsycXSEM = zeros(nBins, 1);
+            PsycYSEM = zeros(nBins, 1);
+            
+            for ib = 1:nBins
+                mask = Bin_valid == uniqueBins(ib);
+                n = sum(mask);
+                PsycX(ib) = mean(DV_valid(mask));
+                PsycY(ib) = mean(Ch_valid(mask));
+                if n > 1
+                    PsycXSEM(ib) = std(DV_valid(mask)) / sqrt(n);
+                    PsycYSEM(ib) = std(Ch_valid(mask)) / sqrt(n);
+                end
+            end
+            
+            % Plot points with vertical and horizontal error bars
+            errorbar(PsycX, PsycY, PsycXSEM, PsycYSEM, 'LineStyle', 'none', ...
+                 'Marker', 'o', 'MarkerFaceColor', Colors(i,:), ...
+                 'MarkerEdgeColor', 'w', 'MarkerSize', 6, ...
+                 'Color', Colors(i,:), 'LineWidth', 1);
+            
+            % Plot Fit
             XFit = linspace(min(AllDVs{i})-10*eps, max(AllDVs{i})+10*eps, 100);
             YFit = glmval(glmfit(AllDVs{i}, AllChoices{i}', 'binomial'), XFit, 'logit');
             plot(XFit, YFit, '-', 'Color', Colors(i,:), 'LineWidth', 1.5);
@@ -177,6 +204,7 @@ function FigHandle = Analysis(SessionData)
     
     xlabel('DV');
     ylabel('p left');
+    ylim([0 1]);
     text(0.95*min(get(gca,'XLim')), 0.96*max(get(gca,'YLim')), ...
          ['n=', num2str(nTrialsCompleted)]);
     hold off
@@ -345,6 +373,87 @@ function FigHandle = Analysis(SessionData)
         xlim([0 1]);
         ylim([0 4]);
         hold off
+    end
+
+    %% ---- Step 9: Separate DV vs Time figure for single session ----
+    
+    if nSessions == 1 && isfield(SessionData, 'TrialStartTimestamp')
+        % Create separate figure
+        FigHandle2 = figure('Name', 'DV Distribution vs Time', 'Position', [200 200 1000 400]);
+        
+        % Get trial times in minutes
+        TrialTimes = SessionData.TrialStartTimestamp(1:nTrials);
+        TrialTimesMin = TrialTimes / 60;
+        
+        % Plot DV distribution on primary axes (trial number on bottom)
+        ax1 = axes(FigHandle2);
+        hold(ax1, 'on');
+        
+        for iBlock = unique(BlockNumber)
+            blockIdx = (BlockNumber == iBlock);
+            currentBias = unique(AudBias(blockIdx));
+            
+            if isempty(currentBias) || any(isnan(currentBias))
+                continue;
+            end
+            
+            if currentBias == 0.5
+                if iBlock == 1
+                    color = unbiasedColor;
+                elseif iBlock == 4
+                    color = lastBlockColor;
+                else
+                    color = unbiasedColor;
+                end
+            elseif currentBias > 0.5
+                color = leftBiasColor;
+            elseif currentBias < 0.5
+                color = rightBiasColor;
+            else
+                continue;
+            end
+            
+            CurrentDVs = DV(blockIdx);
+            blockIndices = find(blockIdx);
+            plot(ax1, blockIndices, CurrentDVs, 'o', 'Color', color, 'MarkerSize', 3);
+        end
+        
+        xlabel(ax1, 'Trial Number');
+        ylabel(ax1, 'Aud DV');
+        % title(ax1, sprintf('R%d on %s', RatID, dateString));
+        hold(ax1, 'off');
+        
+        % Create overlaid axes for time (minutes) on top
+        ax2 = axes(FigHandle2, 'Position', get(ax1, 'Position'), 'Color', 'none');
+        ax2.XAxisLocation = 'top';
+        ax2.YAxis.Visible = 'off';
+        ax2.Color = 'none';
+        ax2.Box = 'off';
+        
+        % Set ax2 limits to match ax1
+        ax2.XLim = ax1.XLim;
+        ax2.YLim = ax1.YLim;
+        
+        % Set tick positions to match ax1
+        ax2.XTick = ax1.XTick;
+        
+        % Create time labels for each tick position
+        xtickPositions = ax1.XTick;
+        timeLabels = cell(numel(xtickPositions), 1);
+        for i = 1:numel(xtickPositions)
+            trialNum = round(xtickPositions(i));
+            if trialNum >= 1 && trialNum <= numel(TrialTimesMin)
+                timeLabels{i} = sprintf('%.1f', TrialTimesMin(trialNum));
+            else
+                timeLabels{i} = '';
+            end
+        end
+        ax2.XTickLabel = timeLabels;
+        ax2.XColor = [0.3 0.3 0.3];
+        xlabel(ax2, 'Time (min)');
+        
+        % Link x-axes so they stay synchronized on zoom/pan
+        linkaxes([ax1 ax2], 'x');
     end
 
 end % Analysis()
