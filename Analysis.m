@@ -160,6 +160,9 @@ function FigHandle = Analysis(SessionData)
     end
     
     % Plot aggregated psychometric curves
+    beta_Left = [];
+    beta_Right = [];
+    
     for i = 1:4
         if ~isempty(AllDVs{i}) && sum(~isnan(AllDVs{i})) > 4
             BinIdx = discretize(AllDVs{i}, commonBinEdges);
@@ -190,21 +193,48 @@ function FigHandle = Analysis(SessionData)
             end
             
             % Plot points with vertical and horizontal error bars
-            errorbar(PsycX, PsycY, PsycXSEM, PsycYSEM, 'LineStyle', 'none', ...
+            errorbar(PsycX, PsycY, PsycYSEM, PsycXSEM, 'LineStyle', 'none', ...
                  'Marker', 'o', 'MarkerFaceColor', Colors(i,:), ...
                  'MarkerEdgeColor', 'w', 'MarkerSize', 6, ...
                  'Color', Colors(i,:), 'LineWidth', 1);
             
-            % Plot Fit
+            % Plot Fit and store betas for Left (2) and Right (3) blocks
             XFit = linspace(min(AllDVs{i})-10*eps, max(AllDVs{i})+10*eps, 100);
-            YFit = glmval(glmfit(AllDVs{i}, AllChoices{i}', 'binomial'), XFit, 'logit');
+            beta = glmfit(AllDVs{i}, AllChoices{i}', 'binomial');
+            YFit = glmval(beta, XFit, 'logit');
             plot(XFit, YFit, '-', 'Color', Colors(i,:), 'LineWidth', 1.5);
+            
+            if i == 2 % Left Bias
+                beta_Left = beta;
+            elseif i == 3 % Right Bias
+                beta_Right = beta;
+            end
         end
+    end
+    
+    % Calculate and display PSE Shift and ABC
+    if ~isempty(beta_Left) && ~isempty(beta_Right)
+        % PSE = -intercept / slope
+        PSE_L = -beta_Left(1) / beta_Left(2);
+        PSE_R = -beta_Right(1) / beta_Right(2);
+        deltaPSE = PSE_L - PSE_R;
+        
+        % Area Between Curves (evaluated from DV -1 to 1)
+        x_grid = linspace(-1, 1, 1000);
+        y_L = glmval(beta_Left, x_grid, 'logit');
+        y_R = glmval(beta_Right, x_grid, 'logit');
+        ABC = trapz(x_grid, abs(y_L - y_R));
+        
+        % Display text in southeast corner
+        metricsStr = sprintf('ΔPSE (L-R): %.3f\nABC (L vs R): %.3f', deltaPSE, ABC);
+        text(0.98, 0.02, metricsStr, 'Units', 'normalized', ...
+             'HorizontalAlignment', 'right', 'VerticalAlignment', 'bottom', ...
+             'FontSize', 9, 'EdgeColor', [0.8 0.8 0.8], 'BackgroundColor', 'w', ...
+             'Margin', 2);
     end
     
     xlabel('DV');
     ylabel('p left');
-    ylim([0 1]);
     text(0.95*min(get(gca,'XLim')), 0.96*max(get(gca,'YLim')), ...
          ['n=', num2str(nTrialsCompleted)]);
     hold off
