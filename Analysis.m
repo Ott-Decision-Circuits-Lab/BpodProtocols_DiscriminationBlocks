@@ -76,16 +76,18 @@ function FigHandle = Analysis(SessionData)
     
     %% ---- Step 5: Setup figure ----
     
-    FigHandle = tiledlayout('flow');
-    FigHandle.TileSpacing = 'tight';
-    FigHandle.Padding = 'tight';
-    sgtitle(figtitle, 'FontSize', 14);
+    % Create a new figure explicitly so it doesn't draw on the Bpod console
+    FigHandle = figure('Name', figtitle, 'Position', [50 75 1400 650]);
+    
+    % Optional: if you want a 3x2 grid to hold your 5 plots:
+    nRows = 3;
+    nCols = 2;
     
     %% ---- Step 6: Psychometric Plot ----
     
-    nexttile(FigHandle);
-    hold on
-    
+    subplot(3, 2, 1);
+    hold on;
+        
     AudBin = 7;
     DV_Completed = DV(CompletedTrials);
     commonBinEdges = linspace(min(DV_Completed)-10*eps, max(DV_Completed)+10*eps, AudBin+1);
@@ -241,7 +243,7 @@ function FigHandle = Analysis(SessionData)
     
     %% ---- Step 7: DV Distribution Plot ----
     
-    nexttile(FigHandle);
+    subplot(3, 2, 2);
     hold on
     
     GlobalStartPosition = 1;
@@ -307,7 +309,7 @@ function FigHandle = Analysis(SessionData)
     blockTypeNames = {'Unbiased (Start)', 'Left Bias', 'Right Bias'};
     
     for iBlock = 1:3
-        nexttile(FigHandle);
+        subplot(3, 2, 2 + iBlock);
         hold on
         
         BlockDVs = [];
