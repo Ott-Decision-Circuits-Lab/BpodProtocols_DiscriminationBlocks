@@ -260,7 +260,7 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
                 end
                 
                 blockIdx = [];
-                if blockBias == 0.5
+                if all(blockBias == 0.5)
                     if b == 1
                         blockIdx = 1;
                     elseif b == 4
@@ -268,9 +268,9 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
                     else
                         blockIdx = 1;
                     end
-                elseif blockBias > 0.5
+                elseif all(blockBias > 0.5)
                     blockIdx = 2;
-                elseif blockBias < 0.5
+                elseif all(blockBias < 0.5)
                     blockIdx = 3;
                 end
                 
@@ -323,19 +323,38 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
     end
     hold off
     
-    %% DV Distribution Plot - Comparison
+    %% Collapsed Unbiased Psychometric Figure
     nexttile(FigHandle);
     hold on
     
-    % Initialize StartPosition OUTSIDE the condition loop so it increments continuously
-    GlobalStartPosition = 1; 
+    % 3 colors: Black (unbiased), Red (left), Blue (right)
+    CollapsedColors = [unbiasedColor; leftBiasColor; rightBiasColor];
+    CollapsedNames = {'Unbiased', 'Left Bias', 'Right Bias'};
+    
+    legendEntries_collapsed = strings(0);
+    legendHandles_collapsed = gobjects(0);
     
     for iCond = 1:nConditions
         SD = AllSessionData{iCond};
         
         DV = SD.TrialWiseData.DecisionVariable;
+        ChoiceLeft = SD.TrialWiseData.ChoiceLeft;
+        Feedback = SD.TrialWiseData.Feedback;
+        Correct = SD.TrialWiseData.ChoiceCorrect;
         BlockNumber = SD.TrialWiseData.BlockNumber;
         AudBias = SD.TrialWiseData.AudBias;
+        CompletedTrials = (Feedback & Correct == 1) | (Correct == 0);
+        
+        DV_Completed = DV(CompletedTrials);
+        binEdges = linspace(min(DV_Completed) - 10*eps, max(DV_Completed) + 10*eps, AudBin + 1);
+        
+        % Initialize 3 buckets: 1=Unbiased (collapsed), 2=Left, 3=Right
+        CollapsedDVs = cell(1, 3);
+        CollapsedChoices = cell(1, 3);
+        for i = 1:3
+            CollapsedDVs{i} = [];
+            CollapsedChoices{i} = [];
+        end
         
         SessionIndices = cumsum([0, SD.TrialWiseData.nTrialsArray]);
         nSessions = SD.SessionWiseData.nSessions;
@@ -348,6 +367,7 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
             SessionBias = AudBias(currentSessionIdx);
             SessionBlockNum = BlockNumber(currentSessionIdx);
             SessionDV = DV(currentSessionIdx);
+            SessionChoice = ChoiceLeft(currentSessionIdx);
             
             sessionBlocks = unique(SessionBlockNum);
             
@@ -359,62 +379,179 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
                     continue;
                 end
                 
-                % Determine color
-                if blockBias == 0.5
-                    if b == 1
-                        color = unbiasedColor;
-                    elseif b == 4
-                        color = lastBlockColor;
-                    else
-                        color = unbiasedColor;
-                    end
-                elseif blockBias > 0.5
-                    color = leftBiasColor;
-                elseif blockBias < 0.5
-                    color = rightBiasColor;
-                else
-                    continue;
+                blockIdx = [];
+                if all(blockBias == 0.5)
+                    blockIdx = 1;  % All unbiased blocks go here
+                elseif all(blockBias > 0.5)
+                    blockIdx = 2;
+                elseif all(blockBias < 0.5)
+                    blockIdx = 3;
                 end
                 
-                CurrentDVs = SessionDV(blockMask);
-                EndPosition = GlobalStartPosition + numel(CurrentDVs) - 1;
-                
-                % Apply different marker for each condition, but keep true DV on y-axis
-                mk = CondMarkers{min(iCond, numel(CondMarkers))};
-                plot(GlobalStartPosition:EndPosition, CurrentDVs, mk, ...
-                     'Color', color, 'MarkerSize', 3, 'MarkerFaceColor', 'w');
-                
-                GlobalStartPosition = EndPosition + 1;
-            end
-            
-            % Session boundary line (dotted gray)
-            if s < nSessions
-                xline(GlobalStartPosition - 0.5, ':', 'Color', [0.7, 0.7, 0.7], 'LineWidth', 0.5);
+                if ~isempty(blockIdx)
+                    BlockDVs = SessionDV(blockMask);
+                    BlockChoices = SessionChoice(blockMask);
+                    validMask = ~isnan(BlockDVs) & ~isnan(BlockChoices);
+                    CollapsedDVs{blockIdx} = [CollapsedDVs{blockIdx}, BlockDVs(validMask)];
+                    CollapsedChoices{blockIdx} = [CollapsedChoices{blockIdx}, BlockChoices(validMask)];
+                end
             end
         end
         
-        % Condition boundary line (dashed dark gray)
-        if iCond < nConditions
-            xline(GlobalStartPosition - 0.5, '--', 'Color', [0.3, 0.3, 0.3], 'LineWidth', 1.5);
+        ls = CondLineStyles{min(iCond, numel(CondLineStyles))};
+        mk = CondMarkers{min(iCond, numel(CondMarkers))};
+        
+        for iBlock = 1:3
+            if ~isempty(CollapsedDVs{iBlock}) && sum(~isnan(CollapsedDVs{iBlock})) > 4
+                BinIdx = discretize(CollapsedDVs{iBlock}, binEdges);
+                
+                validData = ~isnan(CollapsedDVs{iBlock}) & ~isnan(CollapsedChoices{iBlock}) & ~isnan(BinIdx);
+                DV_valid = CollapsedDVs{iBlock}(validData);
+                Ch_valid = CollapsedChoices{iBlock}(validData);
+                Bin_valid = BinIdx(validData);
+                
+                uniqueBins = unique(Bin_valid);
+                nBins = numel(uniqueBins);
+                PsycX = zeros(nBins, 1);
+                PsycY = zeros(nBins, 1);
+                PsycXSEM = zeros(nBins, 1);
+                PsycYSEM = zeros(nBins, 1);
+                
+                for ib = 1:nBins
+                    mask = Bin_valid == uniqueBins(ib);
+                    n = sum(mask);
+                    PsycX(ib) = mean(DV_valid(mask));
+                    PsycY(ib) = mean(Ch_valid(mask));
+                    if n > 1
+                        PsycXSEM(ib) = std(DV_valid(mask)) / sqrt(n);
+                        PsycYSEM(ib) = std(Ch_valid(mask)) / sqrt(n);
+                    end
+                end
+                
+                if iCond == 1
+                    errorbar(PsycX, PsycY, PsycYSEM, PsycXSEM, 'LineStyle', 'none', ...
+                         'Marker', mk, 'MarkerFaceColor', CollapsedColors(iBlock, :), ...
+                         'MarkerEdgeColor', 'w', 'MarkerSize', 6, ...
+                         'Color', CollapsedColors(iBlock, :), 'LineWidth', 1);
+                else
+                    errorbar(PsycX, PsycY, PsycYSEM, PsycXSEM, 'LineStyle', 'none', ...
+                         'Marker', mk, 'MarkerFaceColor', 'w', ...
+                         'MarkerEdgeColor', CollapsedColors(iBlock, :), 'MarkerSize', 6, ...
+                         'Color', CollapsedColors(iBlock, :), 'LineWidth', 1);
+                end
+                
+                XFit = linspace(min(CollapsedDVs{iBlock}) - 10*eps, ...
+                                max(CollapsedDVs{iBlock}) + 10*eps, 100);
+                beta = glmfit(CollapsedDVs{iBlock}, CollapsedChoices{iBlock}', 'binomial');
+                YFit = glmval(beta, XFit, 'logit');
+                hFit = plot(XFit, YFit, ls, 'Color', CollapsedColors(iBlock, :), 'LineWidth', 1.5);
+                
+                legendEntries_collapsed(end+1) = string([char(DrugNames{iCond}), ' - ', char(CollapsedNames{iBlock})]);
+                legendHandles_collapsed(end+1) = hFit;
+            end
         end
     end
     
-    xlim([0 GlobalStartPosition - 1]);
-    xlabel('iTrial (pooled across sessions)');
-    ylabel('Aud DV');
-    
-    % Add condition labels at the top of the plot
-    cumTrials = 0;
-    yTop = max(cellfun(@(x) max(x.TrialWiseData.DecisionVariable(~isnan(x.TrialWiseData.DecisionVariable))), AllSessionData));
-    for iCond = 1:nConditions
-        nTrialsCond = sum(AllSessionData{iCond}.TrialWiseData.nTrialsArray);
-        xPos = cumTrials + nTrialsCond / 2;
-        text(xPos, yTop * 1.05, DrugNames{iCond}, 'HorizontalAlignment', 'center', ...
-             'FontSize', 10, 'FontWeight', 'bold');
-        cumTrials = cumTrials + nTrialsCond;
+    xlabel('DV');
+    ylabel('p left');
+    title('Psychometric - Collapsed Unbiased Blocks');
+    if ~isempty(legendHandles_collapsed)
+        legend(legendHandles_collapsed, legendEntries_collapsed, 'Location', 'best', 'FontSize', 8);
     end
-    
     hold off
+    
+    % %% DV Distribution Plot - Comparison
+    % nexttile(FigHandle);
+    % hold on
+    % 
+    % % Initialize StartPosition OUTSIDE the condition loop so it increments continuously
+    % GlobalStartPosition = 1; 
+    % 
+    % for iCond = 1:nConditions
+    %     SD = AllSessionData{iCond};
+    % 
+    %     DV = SD.TrialWiseData.DecisionVariable;
+    %     BlockNumber = SD.TrialWiseData.BlockNumber;
+    %     AudBias = SD.TrialWiseData.AudBias;
+    % 
+    %     SessionIndices = cumsum([0, SD.TrialWiseData.nTrialsArray]);
+    %     nSessions = SD.SessionWiseData.nSessions;
+    % 
+    %     for s = 1:nSessions
+    %         idxStart = SessionIndices(s) + 1;
+    %         idxEnd = SessionIndices(s + 1);
+    %         currentSessionIdx = idxStart:idxEnd;
+    % 
+    %         SessionBias = AudBias(currentSessionIdx);
+    %         SessionBlockNum = BlockNumber(currentSessionIdx);
+    %         SessionDV = DV(currentSessionIdx);
+    % 
+    %         sessionBlocks = unique(SessionBlockNum);
+    % 
+    %         for b = sessionBlocks
+    %             blockMask = (SessionBlockNum == b);
+    %             blockBias = unique(SessionBias(blockMask));
+    % 
+    %             if isempty(blockBias) || any(isnan(blockBias))
+    %                 continue;
+    %             end
+    % 
+    %             % Determine color
+    %             if all(blockBias == 0.5)
+    %                 if b == 1
+    %                     color = unbiasedColor;
+    %                 elseif b == 4
+    %                     color = lastBlockColor;
+    %                 else
+    %                     color = unbiasedColor;
+    %                 end
+    %             elseif all(blockBias > 0.5)
+    %                 color = leftBiasColor;
+    %             elseif all(blockBias < 0.5)
+    %                 color = rightBiasColor;
+    %             else
+    %                 continue;
+    %             end
+    % 
+    %             CurrentDVs = SessionDV(blockMask);
+    %             EndPosition = GlobalStartPosition + numel(CurrentDVs) - 1;
+    % 
+    %             % Apply different marker for each condition, but keep true DV on y-axis
+    %             mk = CondMarkers{min(iCond, numel(CondMarkers))};
+    %             plot(GlobalStartPosition:EndPosition, CurrentDVs, mk, ...
+    %                  'Color', color, 'MarkerSize', 3, 'MarkerFaceColor', 'w');
+    % 
+    %             GlobalStartPosition = EndPosition + 1;
+    %         end
+    % 
+    %         % Session boundary line (dotted gray)
+    %         if s < nSessions
+    %             xline(GlobalStartPosition - 0.5, ':', 'Color', [0.7, 0.7, 0.7], 'LineWidth', 0.5);
+    %         end
+    %     end
+    % 
+    %     % Condition boundary line (dashed dark gray)
+    %     if iCond < nConditions
+    %         xline(GlobalStartPosition - 0.5, '--', 'Color', [0.3, 0.3, 0.3], 'LineWidth', 1.5);
+    %     end
+    % end
+    % 
+    % xlim([0 GlobalStartPosition - 1]);
+    % xlabel('iTrial (pooled across sessions)');
+    % ylabel('Aud DV');
+    % 
+    % % Add condition labels at the top of the plot
+    % cumTrials = 0;
+    % yTop = max(cellfun(@(x) max(x.TrialWiseData.DecisionVariable(~isnan(x.TrialWiseData.DecisionVariable))), AllSessionData));
+    % for iCond = 1:nConditions
+    %     nTrialsCond = sum(AllSessionData{iCond}.TrialWiseData.nTrialsArray);
+    %     xPos = cumTrials + nTrialsCond / 2;
+    %     text(xPos, yTop * 1.05, DrugNames{iCond}, 'HorizontalAlignment', 'center', ...
+    %          'FontSize', 10, 'FontWeight', 'bold');
+    %     cumTrials = cumTrials + nTrialsCond;
+    % end
+    % 
+    % hold off
 
     %% DV Distribution Histograms with Theoretical Overlays
     blockTypeNames = {'Unbiased (Start)', 'Left Bias', 'Right Bias'};
@@ -462,11 +599,11 @@ function FigHandle = RunComparisonAnalysis(AllSessionData, DrugNames)
                     
                     % Match block type
                     matchBlock = false;
-                    if iBlock == 1 && blockBias == 0.5 && b == 1
+                    if iBlock == 1 && all(blockBias == 0.5) && b == 1
                         matchBlock = true;
-                    elseif iBlock == 2 && blockBias > 0.5
+                    elseif iBlock == 2 && all(all(blockBias > 0.5))
                         matchBlock = true;
-                    elseif iBlock == 3 && blockBias < 0.5
+                    elseif iBlock == 3 && all(all(blockBias < 0.5))
                         matchBlock = true;
                     end
                     

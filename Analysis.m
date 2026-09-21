@@ -240,10 +240,125 @@ function FigHandle = Analysis(SessionData)
     text(0.95*min(get(gca,'XLim')), 0.96*max(get(gca,'YLim')), ...
          ['n=', num2str(nTrialsCompleted)]);
     hold off
+
+    %% ---- Step 6a: Collapsed Unbiased Psychometric Figure ----
+    
+    subplot(3, 2, 2);
+    hold on
+    
+    % Initialize 3 buckets: 1=Unbiased (collapsed), 2=Left, 3=Right
+    CollapsedDVs = cell(1, 3);
+    CollapsedChoices = cell(1, 3);
+    for i = 1:3
+        CollapsedDVs{i} = [];
+        CollapsedChoices{i} = [];
+    end
+    
+    for s = 1:nSessions
+        idxStart = SessionIndices(s) + 1;
+        if s < nSessions
+            idxEnd = SessionIndices(s + 1);
+        else
+            idxEnd = numel(DV);
+        end
+        currentSessionIdx = idxStart:idxEnd;
+        
+        SessionBias = AudBias(currentSessionIdx);
+        SessionBlockNum = BlockNumber(currentSessionIdx);
+        SessionDV = DV(currentSessionIdx);
+        SessionChoice = ChoiceLeft(currentSessionIdx);
+        
+        sessionBlocks = unique(SessionBlockNum);
+        
+        for b = sessionBlocks
+            blockMask = (SessionBlockNum == b);
+            blockBias = unique(SessionBias(blockMask));
+            
+            if isempty(blockBias) || any(isnan(blockBias))
+                continue;
+            end
+            
+            % Determine bucket (3 buckets: 1=Unbiased, 2=Left, 3=Right)
+            blockIdx = [];
+            if all(blockBias == 0.5)
+                blockIdx = 1;  % All unbiased blocks go here
+            elseif all(blockBias > 0.5)
+                blockIdx = 2;
+            elseif all(blockBias < 0.5)
+                blockIdx = 3;
+            end
+            
+            if ~isempty(blockIdx)
+                BlockDVs = SessionDV(blockMask);
+                BlockChoices = SessionChoice(blockMask);
+                validMask = ~isnan(BlockDVs) & ~isnan(BlockChoices);
+                CollapsedDVs{blockIdx} = [CollapsedDVs{blockIdx}, BlockDVs(validMask)];
+                CollapsedChoices{blockIdx} = [CollapsedChoices{blockIdx}, BlockChoices(validMask)];
+            end
+        end
+    end
+    
+    % 3 colors: Black (unbiased), Red (left), Blue (right)
+    CollapsedColors = [unbiasedColor; leftBiasColor; rightBiasColor];
+    CollapsedNames = {'Unbiased', 'Left Bias', 'Right Bias'};
+    
+    legendEntries_collapsed = strings(0);
+    legendHandles_collapsed = gobjects(0);
+    
+    for iBlock = 1:3
+        if ~isempty(CollapsedDVs{iBlock}) && sum(~isnan(CollapsedDVs{iBlock})) > 4
+            BinIdx = discretize(CollapsedDVs{iBlock}, commonBinEdges);
+            
+            validData = ~isnan(CollapsedDVs{iBlock}) & ~isnan(CollapsedChoices{iBlock}) & ~isnan(BinIdx);
+            DV_valid = CollapsedDVs{iBlock}(validData);
+            Ch_valid = CollapsedChoices{iBlock}(validData);
+            Bin_valid = BinIdx(validData);
+            
+            uniqueBins = unique(Bin_valid);
+            nBins = numel(uniqueBins);
+            PsycX = zeros(nBins, 1);
+            PsycY = zeros(nBins, 1);
+            PsycXSEM = zeros(nBins, 1);
+            PsycYSEM = zeros(nBins, 1);
+            
+            for ib = 1:nBins
+                mask = Bin_valid == uniqueBins(ib);
+                n = sum(mask);
+                PsycX(ib) = mean(DV_valid(mask));
+                PsycY(ib) = mean(Ch_valid(mask));
+                if n > 1
+                    PsycXSEM(ib) = std(DV_valid(mask)) / sqrt(n);
+                    PsycYSEM(ib) = std(Ch_valid(mask)) / sqrt(n);
+                end
+            end
+            
+            errorbar(PsycX, PsycY, PsycYSEM, PsycXSEM, 'LineStyle', 'none', ...
+                 'Marker', 'o', 'MarkerFaceColor', CollapsedColors(iBlock, :), ...
+                 'MarkerEdgeColor', 'w', 'MarkerSize', 6, ...
+                 'Color', CollapsedColors(iBlock, :), 'LineWidth', 1);
+            
+            XFit = linspace(min(CollapsedDVs{iBlock})-10*eps, ...
+                            max(CollapsedDVs{iBlock})+10*eps, 100);
+            beta = glmfit(CollapsedDVs{iBlock}, CollapsedChoices{iBlock}', 'binomial');
+            YFit = glmval(beta, XFit, 'logit');
+            hFit = plot(XFit, YFit, '-', 'Color', CollapsedColors(iBlock, :), 'LineWidth', 1.5);
+            
+            legendEntries_collapsed(end+1) = string(char(CollapsedNames{iBlock}));
+            legendHandles_collapsed(end+1) = hFit;
+        end
+    end
+    
+    xlabel('DV');
+    ylabel('p left');
+    title('Psychometric - Collapsed Unbiased Blocks');
+    if ~isempty(legendHandles_collapsed)
+        legend(legendHandles_collapsed, legendEntries_collapsed, 'Location', 'best', 'FontSize', 8);
+    end
+    hold off
     
     %% ---- Step 7: DV Distribution Plot ----
     
-    subplot(3, 2, 2);
+    subplot(3, 2, 3);
     hold on
     
     GlobalStartPosition = 1;
@@ -309,7 +424,7 @@ function FigHandle = Analysis(SessionData)
     blockTypeNames = {'Unbiased (Start)', 'Left Bias', 'Right Bias'};
     
     for iBlock = 1:3
-        subplot(3, 2, 2 + iBlock);
+        subplot(3, 2, 3 + iBlock);
         hold on
         
         BlockDVs = [];
